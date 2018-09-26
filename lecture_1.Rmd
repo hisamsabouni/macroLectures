@@ -1,0 +1,382 @@
+---
+title: 'Econ 302: Lecture 1'
+author: "Hisam Sabouni"
+date: "9/10/2018"
+output: pdf_document
+linestretch: 1.5
+---
+
+\fontfamily{qtm}
+\fontsize{12}{12}
+\selectfont
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##Overview
+
+In this course we will build a strong foundation in macroeconomics. The course introduces core concepts in macroeconmics through the general equilbirium framework. We will use microeconomic foundations to model the interactions between firms, consumers, and governments to gain insight into the macroeconomy. While covering theoretical models we will take an applied approach to test our models. 
+
+More percisely, the aim of this class is to equip you with a set of tools to analyze macroeconomic movements in the long and short-run. We will use macroeconomic data on incomes, prices, unemployment, interest rates, etc. to help model various pieces of the economy. We will begin by analyzing clasical theory in macroeconomics, to model long-run dynamics, then proceed to analyze new Keynesian models, to model short-run dyanmics. We will conclude by putting everything together and building models that capture both short and long-run dynamics. 
+
+##Tools
+We will rely on the R programming language to build our models and analyze economic data. R can be downloaded at the following URL: https://cran.r-project.org/. In addition to R, we will be using the R studio integrated development enviornment (IDE), which allows us to create smart documents and program in a better enviornment that R provides. R studio can be downloaded for free at the following URL: https://www.rstudio.com/products/rstudio/download/. One of the great features of R is that we can easily load in data from pretty much anywhere really quickly. Furthermore, R is an open-source programming language where developers from all over the world contribute to the create of packages (https://cran.r-project.org/web/packages/available_packages_by_name.html). A package we will quite often rely upon is quantmod, which will allow us to pull data from FRED directly into R. 
+
+
+##Why do we care?
+
+Macroeconomics helps us think about why some countries have higher standards of living (in terms of money, mortality rates, education, etc.) compared to others. Marcoeconomics merges aspects of all fields in economics together to shed light into the future prospects of a country. Furthermore, macroeconoimcs has endless real world applicability that directly influences the lives of people around the world, Robert Lucas summarized this nicely by stating:
+
+"Is there some action a government in India could take that would lead the Indian economy to grow like Indonesia's or Egypts? If so, what, exactly? If not, what is it about the "nature of India" that makes it so? The consequences for human welfare involved in questions like these are simply staggering: Once one starts to think about them, it is hard to think about anything else."
+
+Open any respectable news outlet today and you will see a variety of headlines covering topics such as tariffs, exchange rates, interest rates, inflation rates, etc. Throughout this class we will try to equip you with tools to understand these topics.
+
+
+##Data
+
+In macroeconomics, we rely heavily on a variety of data sources for our analysis. We will pull most of our data from the Federal Reserve Bank of St. Louis's website (FRED) https://fred.stlouisfed.org/ and from the World Bank's website https://data.worldbank.org/. A few of the variables of interest to us are:
+
+> * Inflation Rate: Measures how fast prices are rising by tracking the prices of a \emph{fixed} basket of goods and services over time. FRED Code: Consumer Price Index: Total All Items for the United States (CPALTT01USQ657N)
+
+
+```{r}
+#install.packages('quantmod')
+library(quantmod)
+#?getSymbols
+getSymbols('CPALTT01USQ657N',src = 'FRED')
+cpi.changes <- CPALTT01USQ657N
+head(cpi.changes)
+summary(cpi.changes)
+plot(cpi.changes,main='CPI',ylab='%',xlab='Time')
+```
+
+
+
+> * Unemployment Rate: Measures the fraction of the labor force that is out of work. FRED Code: Civilian Unemployment Rate (UNRATE)
+
+
+```{r}
+getSymbols('UNRATE',src = 'FRED')
+summary(UNRATE)
+plot(UNRATE,main='Unemployment Rate',ylab='%',xlab='Time')
+```
+
+
+
+> * Interest Rate: The market price at which resources are transferred between the present and the future; the return to savings and the cost of borrowing. 
+
+
+> * Consumption (C): The goods and services bought by households. FRED Code: Personal Consumption Expenditures (PCEC):
+
+```{r}
+getSymbols('PCEC',src = 'FRED')
+summary(PCEC)
+plot(PCEC,main='Personal Consumption Expenditures',ylab='$USD Billions',xlab='Time')
+```
+
+
+>> * Durable (lasts a long time). FRED Code: Personal Consumption Expenditures: Durable Goods (PCDG)
+
+
+```{r}
+getSymbols('PCDG',src = 'FRED')
+summary(PCDG)
+plot(PCDG,main='Personal Consumption Expenditures: Durable Goods',ylab='$USD Billions',xlab='Time')
+```
+
+
+
+>> * Non-durable (doesn't last a long time). FRED Code: Personal Consumption Expenditures: Nondurable Goods (PCND)
+
+
+
+```{r}
+getSymbols('PCND',src = 'FRED')
+summary(PCND)
+plot(PCND,main='Personal Consumption Expenditures: Nondurable Goods',ylab='$USD Billions',xlab='Time')
+```
+
+
+>> * Services. FRED Code: Personal Consumption Expenditures: Services (PCESV)
+
+
+```{r}
+getSymbols('PCESV',src = 'FRED')
+summary(PCESV)
+plot(PCESV,main='Personal Consumption Expenditures: Services',ylab='$USD Billions',xlab='Time')
+
+#How has the ratio of consumption between the three categories varied over time?
+consumptionData <- merge(PCDG,PCND,PCESV,all = T)
+head(consumptionData)
+consumptionData <- na.omit(consumptionData)
+consumptionData <- cbind.data.frame(consumptionData,apply(consumptionData,1,sum))
+colnames(consumptionData)[4] <- 'totalConsumption'
+head(consumptionData)
+consumptionData$fractionDurable <- consumptionData$PCDG/consumptionData$totalConsumption
+consumptionData$fractionNondurable <- consumptionData$PCND/consumptionData$totalConsumption
+consumptionData$fractionServices <- 1 - consumptionData$fractionDurable - consumptionData$fractionNondurable
+plot(consumptionData$fractionDurable,main='Consumption Composition',ylim=c(0,1),typ='l')
+lines(consumptionData$fractionNondurable,col = 2)
+lines(consumptionData$fractionServices,col = 3)
+legend('topleft',legend = c('Durable','Nondurable','Services'),col = 1:3,lty = 1)
+```
+
+
+
+> * Investment (I): Goods bought for future use. Consists of three categories: business fixed investment (new plant and equipment), residential investment (housing), and inventory. FRED Code: Gross Private Domestic Investment (GPDI).
+
+
+```{r}
+getSymbols('GPDI',src='FRED')
+summary(GPDI)
+plot(GPDI,main='Gross Private Domestic Investment',ylab='$USD Billions',xlab='Time')
+```
+
+
+> * Government Purchases (G): Goods and services bought by federal, state, and local governments. FRED Code: Government Consumption Expenditures and Gross Investment (GCE).
+
+
+```{r}
+getSymbols('GCE',src='FRED')
+summary(GCE)
+plot(GCE,main='Government Consumption Expenditures and Gross Investment',ylab='$USD Billions',xlab='Time')
+```
+
+
+
+> * Net Exports (NX): The difference between the value of goods and services sold to all other countries and the value of goods and services bought from all other countries (Exports - Imports). FRED Code:  Net Exports of Goods and Services (NETEXP)
+
+
+```{r}
+getSymbols('NETEXP',src='FRED')
+summary(NETEXP)
+plot(NETEXP,main='Net Exports of Goods and Services',ylab='$USD Billions',xlab='Time')
+```
+
+
+> * Nominal Gross Domestic Product (GDP): Measures the total income of everyone in the economy. FRED Code: Gross Domestic Product (GDP)
+
+
+```{r}
+getSymbols('GDP',src='FRED')
+summary(GDP)
+plot(GDP,main='Gross Domestic Product',ylab='$USD Billions',xlab='Time')
+```
+
+
+> * Real GDP: Measures the total income of everyone in the economy (adjusted for the level of prices). FRED Code: Real Gross Domestic Product (GDPC1)
+
+```{r}
+getSymbols('GDPC1',src='FRED')
+summary(GDPC1)
+plot(GDPC1,main='Real Gross Domestic Product',ylab='$USD Billions',xlab='Time')
+```
+
+
+> * National Income and Product Accounts Identity: GDP = C + I + G + NX
+
+
+```{r}
+GDP_Pieces <- merge(PCEC,GPDI,GCE,NETEXP,all = T)
+GDP_Pieces <- na.omit(GDP_Pieces)
+GDP_Pieces$GDP_Aggregated <- apply(GDP_Pieces,1,sum)
+compareGDP <- merge(GDP_Pieces,GDP)
+compareGDP <- na.omit(compareGDP)
+head(compareGDP)
+tail(compareGDP)
+```
+
+We can use the national income and product accounts identity to analyze the relative contribution of each category to GDP over time; for example consumptions realtive contribution is $\frac{\text{Consumption}_{t}}{\text{GDP}_{t}}$
+
+
+
+```{r}
+GDP_Pieces <- merge(PCEC,GPDI,GCE,NETEXP,all = T)
+GDP_Pieces <- na.omit(GDP_Pieces)
+GDP_Contribution <- 100*t(apply(GDP_Pieces,1,function(x)x/sum(x)))
+tail(GDP_Contribution)
+
+plot(index(GDP_Pieces),GDP_Contribution[,1],ylim=c(min(GDP_Contribution),max(GDP_Contribution)),typ='l',xlab='Time',ylab='%')
+for(j in 2:ncol(GDP_Contribution)){
+  lines(lines(index(GDP_Pieces),GDP_Contribution[,j],col=j))
+}
+legend('topleft',legend = colnames(GDP_Contribution),lty = 1,col=1:ncol(GDP_Contribution))
+abline(h = 0,lty = 2)
+```
+
+Since the 1950s in the United States, the realtive contributions of the components of GDP seem pretty constant with consumption making up ~67\% of GDP, investment making up ~17\% of GDP, goverment spending making up ~17\% of GDP, and net exports making up ~-3\% of GDP.
+
+
+Other important definitions:
+
+> * GDP deflator: $\frac{\text{Nominal GDP}}{\text{Real GDP}}$ reflects what's happening to the overall level of prices in the economy. FRED Code:  Gross Domestic Product: Implicit Price Deflator (GDPDEF)
+
+```{r}
+getSymbols('GDPDEF',src ='FRED')
+head(GDPDEF)
+gdpDeflatorChange <- Delt(GDPDEF,type = 'arithmetic')
+plot(100*gdpDeflatorChange,main='GDP Deflator')
+lines(cpi.changes,col = 2)
+legend('topleft',legend = c('Deflator','CPI'),col = 1:2,lty = 1)
+```
+
+
+> * Gross National Product (GNP): measures the total income earned by Nationals. GDP = GDP + Factor Payments from Abroad - Factor payments to Abroad.
+
+> * Personal Income = National income - Indirect business taxes - Corporate profits - Social insurance contribution - Net Interest + Dividends + Government transfers to individuals + Personal interest income.
+
+> * Disposable Personal Income = the amount households and noncorporate businesses have available to spend after satisfying their tax obligations to the government. FRED Code: Disposable Personal Income (DSPI)
+
+```{r}
+getSymbols('DSPI',src = 'FRED')
+plot(DSPI)
+```
+
+
+##Classical Model
+
+###Supply: Total Production of Goods and Services
+
+Factors of production are the inputs used to produce goods and services. The two most important factors of production are capital, $K$, and labor, $L$. We begin by taking the economy's factors of production as given:
+
+\[K = \bar{K}\]
+\[L = \bar{L}\]
+
+The factors of production are inputed into a \emph{production function} which leads to output:
+
+\[Y = F(K,L)\]
+
+Most production functions have \textbf{constant returns to scale}:
+
+\[zY = F(zK,zL)\]
+
+Given that we are assuming $K$ and $L$ are fixed $\rightarrow Y = \bar{Y}$ is also fixed. The distribution of national income is determined by factor prices. Factor prices are the amounts paid to the factors of production. In an economy where the two factors of production are capital and labor, the two factor prices are the wage workers earn and the rent the owners of capital collect. 
+
+In general we assume that firms are competitive (small relative to the market; therefore having little to no impact of market prices). The assumption of competitive firms implies that prices are assumed to be exogenous market conditions. A firms profit is therefore given by:
+
+\[Profit = PY - WL -RK = PF(K,L)- WL -RK \]
+
+where $P$ are the prices that they sell $Y$ output, $W$ is the wage paid to $L$ labor, and $R$ is the rent paid to use capital $K$. Given $P,\ W,$ and $R$ the firm is tasked with determing how much labor and capital to utilize. In general we assume that production functions satisfy the Inada conditions with respect to the production factors: 
+
+\[F'(x) > 0\]
+\[F''(x) < 0\] 
+\[lim_{x\rightarrow 0 }F'(x) = +\infty\]
+\[lim_{x\rightarrow +\infty }F'(x) = 0\]
+
+The Inada conditions along with the assumption of competitive firms implies that firms continue to hire labor/capital up until the point it is no longer profitable to do so (the real factor price):
+
+\[\frac{\partial Profit}{\partial L}: P *MPL = W\rightarrow MPL = \frac{W}{P} = \text{Real wage}\]
+\[\frac{\partial Profit}{\partial K}: P *MPK = R\rightarrow MPK = \frac{R}{P} = \text{Real rental price of captial}\]
+
+To determing what the marginal product of capital/labor is we need to determine a production function. Paul Douglas and Charles Cobb created the Cobb-Douglas production function to model the empirical result that the ratio of labor income to total income has remained constant over time:
+
+
+```{r}
+getSymbols('LABSHPUSA156NRUG',src='FRED')
+head(LABSHPUSA156NRUG)
+plot(LABSHPUSA156NRUG,ylim=c(0,1))
+```
+
+
+Cobb showed that this function has the following form:
+
+\[F(K,L) = A K^{\alpha}L^{1-\alpha}\]
+
+Given the explicit statment of the production function we can derive the marginal products of capital and labor by taking partial derivatives with respect to each variable:
+
+\[\frac{\partial F(K,L)}{\partial K} = \alpha A (\frac{L}{K})^{1-\alpha} = \alpha\frac{Y}{K}\]
+\[\frac{\partial F(K,L)}{\partial L} = (1-\alpha) A (\frac{K}{L})^{\alpha} = (1-\alpha)\frac{Y}{L}\]
+
+###Demand: Total Demand of Goods and Services
+
+Falling back on our national income accounts identity, we know that $Y = C + I + G + NX$. If we continue our journey of trying to model a simple economy and assume that the economy is closed we have that $NX = 0$. Therefore we simply have that $Y = C + I + G$. 
+
+
+####Consumption
+
+We make the simplistic assumption that consumption is equal to some proportion of disposable income (after tax income). $C = C*(Y - T)$, where $C$ is the marginal propensity to consume. For every dollar of disposable income the consumer in our model will consume $C$ cents and save $1-C$ cents. 
+
+####Investment
+
+We allow for both consumers and firms to purchase investment goods. A firm uses investments to finance items such as purcahses of plants and equipment and consumers use investments to finance items such as homes or cars. We assume that investment is inversely related to real interest rates (the cost of borrowing + inflation (Fisher Equation)). $I = I(r)$.
+
+####Government
+
+$G$ in our national income accounts identity refers to spending conducted by the goverment (Federal, state, and local). All aspects of government spending are included in $G$ except for government transfers (welfare, social security, etc.). To keep our classical example simple, we will assume that government spending is fixed ($G =\bar{G}$) and balanced ($T = \bar{T} = G$)
+
+####Putting it all together
+
+Assuming fixed capital and labor:
+
+\[\bar{Y} = F(\bar{K},\bar{L})\]
+
+\[\bar{Y} = C + I + G\]
+
+Assuming consumption is a fraction of disposable income and fixed/balanced government spending:
+
+\[C = C(\bar{Y}-\bar{T})\]
+
+Assuming investment is inversly related to the rate of borrowing:
+
+\[I = I(r)\]
+
+Assuming fixed/balanced government spending:
+
+\[G = \bar{G}\]
+
+\[T = \bar{T}\]
+
+Therefore we have:
+
+\[\bar{Y} = C(\bar{Y} - \bar{T}) + I(r) + \bar{G}\]
+
+Given that everything is fixed except for investment which is a function of interest rates, we have that if supply equals demand, the interest rate will adjust to make the demand for goods and services equal to the supply. 
+
+####Supply and Demand of Loanable Funds
+
+If we restate our the national accounts identity we can see a relationship between savings and investment:
+
+\[Y = C + I + G\]
+
+\[Y - C - G = I\]
+
+\[National Savings = Y - C - G\]
+
+\[Private Savings = Y - T - C\]
+
+\[Public Savings = T - G\]
+
+\[(Y - T - C) + (T- G) = I\]
+
+Savings is essentially the supply of funds avaialable for investment. Going back to our simple neoclassical model:
+
+
+\[\bar{Y} - C(\bar{Y} - \bar{T}) -  \bar{G} = \bar{S} = I(r)\]
+
+```{r}
+r <- seq(0,15,by=0.01)
+investment <-  1000-50*r
+plot(investment,r,typ='l',xlab='Investment/Savings',ylab='r')
+s <- 600
+abline(v = s)
+```
+
+We can use this simple framework to actually get some pretty powerful comparitive statics. For instance, what happens in this simple economy is Government spending increases? 
+
+```{r}
+r <- seq(0,.15,by=0.001)
+investment <-  1000-2000*sqrt(r)#Made it up..
+plot(investment,r,typ='l',xlab='Investment/Savings',ylab='r')
+s1 <- 600
+s2 <- 500
+abline(v = s1)
+abline(v = s2,col = 2)
+```
+
+
+
+
+
+
+

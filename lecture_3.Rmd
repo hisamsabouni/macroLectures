@@ -1,0 +1,286 @@
+---
+title: "Lecture 3"
+author: "Hisam Sabouni"
+date: "9/23/2018"
+output: pdf_document
+linestretch: 1.5
+---
+
+\fontfamily{qtm}
+\fontsize{12}{12}
+\selectfont
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,tidy.opts=list(width.cutoff=45),tidy=TRUE,warning = F,message = F,fig.align = 'center')
+```
+
+
+Civilian noninstitutional population is defined as persons 16 years of age and older residing in the 50 states and the District of Columbia, who are not inmates of institutions (e.g., penal and mental facilities, homes for the aged), and who are not on active duty in the Armed Forces.
+
+Civilian noninstitutional population = Labor force + Not in Labor force
+
+The labor force participation rate is the ration of the labor force to the civilian noninstitutional population:
+
+```{r}
+library(quantmod)
+#Civilian Labor Force Participation Rate (CIVPART)
+getSymbols('CIVPART',src='FRED')
+plot(CIVPART,ylab='%',main='Labor Force Participation Rate')
+```
+
+
+See here for more: https://www.bls.gov/opub/mlr/2016/article/labor-force-participation-what-has-happened-since-the-peak.htm
+
+Let $L$ denote the total labor force, $E$ the number of employed workers (Anyone aged 16+ in the civilian non-institutional population who worked in the last week), and $U$ the number of unemployed workers (Those aged 16 or more who weren't employed, but are available for work and are actively looked for a job within the past four weeks). The unemployment rate is $U/L$
+
+\[L = E + U\]
+
+
+```{r}
+#Civilian Unemployment Rate (UNRATE)
+#Median Duration of Unemployment (UEMPMED)
+getSymbols(c('UNRATE','UEMPMED'),src ='FRED')
+plot(UNRATE)
+```
+
+
+> \textbf{Rate of Job Separation ($s$):} The fraction of employed individuals who lose or elave thier job each month. If 1 percent of the employed lose their jobs each month ($s=0.01$), this implies that the average employment lasts $1/0.01 = 100$ months, about 8 years. 
+
+> \textbf{Rate of Job Finding ($f$):} The fraction of unemployed individuals who find a job each month. If 20\% of the unemployed find a job each month ($f=0.2$), the average time unemployed is $1/0.2 = 5$ months. 
+
+The rate of job separation and job finding determine the rate of unemployment. If the labor market is in a steady-state, then the number of people finding jobs $fU$ mus equal the number of people losing jobs $sE$. 
+
+\[fU = sE\]
+
+\[fU = s(L-U)\]
+
+\[\frac{fU}{L} = \frac{s}{L}(L-U)\]
+
+\[\frac{fU}{L} = s(1-\frac{U}{L})\]
+
+\[\frac{fU}{L} + \frac{sU}{L} = s\]
+
+\[\frac{U}{L} (f + s) = s\]
+
+\[\frac{U}{L} = \frac{s}{(f + s)},\ \text{or},\ \frac{U}{L} = \frac{1}{(f/s + 1)}\]
+
+Here we have that the unemployment rate is a function of the rate of job finding and the rate of job separation. We can write some code to simulate this model to see how the unemployment rate varies as the rate of job separation and job finding vary:
+
+
+```{r}
+job_separation <- seq(0.001,0.05,by = 0.005)
+#Average years employed before becoming unemployed#
+(1/job_separation)/12
+
+job_finding <- 0.2
+unemployment_rate <- 1/(job_finding/job_separation  + 1)
+plot(job_separation,unemployment_rate,ylab='Unemployment Rate',xlab='Rate of Job Separation')
+```
+
+Given a rate of job finding as the rate of job separation increases we have an increasing fraction of the labor force that is unemployed. 
+
+
+```{r}
+job_separation <- 0.01
+job_finding <- seq(0.1,0.3,by=.01)
+#Average months unemployed before becoming employed#
+(1/job_finding)
+
+unemployment_rate <- 1/(job_finding/job_separation  + 1)
+plot(job_finding,unemployment_rate,ylab='Unemployment Rate',xlab='Rate of Job Finding')
+
+#Median Duration of Unemployment (UEMPMED)
+getSymbols('UEMPMED',src = 'FRED')
+plot(UEMPMED,ylab='Weeks',main='Median Unemployment Duration')
+job_finding <- 1/(UEMPMED/4)
+#https://www.bls.gov/bls/news-release/home.htm#TENURE
+#Median around 4 years for age groups and increasing over time
+set.seed(2)
+job_separation <- seq(2,4,length.out = length(job_finding)) + rnorm(length(job_finding),0,0.1)
+job_separation <- 1/(job_separation*12)
+unemployment_rate <- 1/(job_finding/job_separation  + 1)
+plot(100*unemployment_rate,main='Unemployment Rate',ylab='%')
+lines(UNRATE,col = 2)
+```
+
+As the rate of job finding increases we have the a decreasing fraction of the labor force that is unemployed. 
+
+Any policy aimed at lowering the natural rate of unemployment must either reduce the rate of job separation or increase the rate of job finding. For example, government programs that help disiminate information about job vacancies are increasing the rate of job finding, while programs such as unemployment insurance tend reduce the rate of job finding (~50\% of former wage for up to 26 weeks). 
+
+If job finding were instantaneous ($f=1$) then all individuals that become unemployed ($s$) would be able to immediately find work. When $f <1$ there exist frictions in the labor market. Frictions in the labor market arise when workers have different abilities than what jobs require, when there are geographic restrictions (eg. shortage of workers in New York versus excess supply of workers in California),or, when there is limited information flow regarding vacancies. A change in composition of demand among industries or regions is called a sectoral shift. 
+
+
+```{r}
+#https://fred.stlouisfed.org/release/tables?rid=50&eid=4881&snid=5205
+#All Employees: Goods-Producing Industries (USGOOD)
+#All Employees: Trade, Transportation and Utilities (USTPU)
+#All Employees: Information Services (USINFO)
+#All Employees: Financial Activities (USFIRE)
+#All Employees: Professional and Business Services (USPBS)
+#All Employees: Education and Health Services (USEHS)
+#All Employees: Leisure and Hospitality (USLAH)
+#All Employees: Other Services (USSERV)
+#All Employees: Government (USGOVT)
+
+symbols <- c('USGOOD','USTPU','USINFO','USFIRE','USPBS','USEHS','USLAH','USSERV','USGOVT')
+employees_by_sector <- new.env()
+getSymbols(symbols,src='FRED',env=employees_by_sector)
+employees_by_sector <- as.list(employees_by_sector)
+sectoral_employment <- do.call('merge',employees_by_sector)
+head(sectoral_employment)
+sectoral_employment_percent <- 100*sectoral_employment/apply(sectoral_employment,1,sum)
+head(sectoral_employment_percent)
+plot(sectoral_employment_percent[,1],typ='l',ylim=c(0,max(sectoral_employment_percent)),main='Employee Allocation USA',ylab='%')
+for(i in 2:ncol(sectoral_employment_percent)){
+  lines(sectoral_employment_percent[,i],col=i)
+}
+legend('topright',legend = colnames(sectoral_employment_percent),lty = 1,col = 1:ncol(sectoral_employment_percent),cex=0.7)
+
+```
+
+
+Unemployment is also caused by wage rigidity; the failure of wages to adjust to a level at which labor supply equals labor demand. Wage rigidity arises due to:
+
+> * Minimum wage laws: The minimum wage may exceed the equilbrium wage of unskilled wokers (effects teenagers). Half of all hourly-paid workers earning the minimum wage or less are under 25.  
+
+> * Labor unions: The wages of unionized workers are determined by bargaining between union leaders and firm managment. Often, the final agreement raises the wages above the equilibrium level and allows the firm to decide how many workers to employ (usually less workers). See for example page 62: https://hotelworkers.org/images/uploads/NYC_Hotel_Industry_Wide_Agreement.pdf
+
+> * Efficency wages: These theories hold that high wages make workers more productive and that a cut to wages would reduce worker morale/productivity. 
+
+>> 1. A higher wage can increase workers' food consumption, and thereby cause them to be better nourished and more productive. 
+
+>> 2. A higher wage can increase workers' effort in situations where the firm cannot monitor them perfectly. 
+
+>> 3. Paying a higher wage can improve workers' ability along dimensions the firm cannot observe. For instance, a firm offering higher wages may intice an applicant pool of mostly high-type workers which could lead to a more productive work force.
+
+>> 4. A high wage can build loyalty among workers and induce high effort (Ford's \$5 work day).
+
+
+Suppose we have a large number, N, of identically competitive firms. The representative firm seeks to maximize its profits:
+
+\[Profit = Y - wL\]
+
+Where $Y$ is the firm's output, $w$ is the wage that it pays, and $L$ is the amount of labor it hires. A firms output depends on the number of workers it employs and on their effort. 
+
+\[Y = F(eL),\  F' > 0,\ F'' < 0\]
+
+where $e$ denotes workers' effort. Let the level of effort could be a function of the wage they recieve $w$, the wage paid by other firms $w_{a}$, and the unemployment rate $u$:
+
+\[e = e(w,w_{a},u),\ e_{1} > 0,\ e_{2} < 0,\ e_{3} > 0\]
+
+For all $L$ identical workers. 
+
+\[max\ Profit = Y - wL\]
+
+\[max\ Profit = F(e(w,w_{a},u)L) - wL\]
+
+\[\frac{\partial Profit}{\partial L}: F'(e(w,w_{a},u)L)e(w,w_{a},u) - w = 0\]
+
+\[\frac{\partial Profit}{\partial L}: F'(e(w,w_{a},u)L)=  w/e(w,w_{a},u)\]
+
+Firms hire workers until the marginal product of effective labor equals its cost. 
+
+\[\frac{\partial Profit}{\partial w}: F'(e(w,w_{a},u)L)Le_{1}(w,w_{a},u) - L = 0\]
+
+\[\frac{\partial Profit}{\partial w}: we_{1}(w,w_{a},u)/e(w,w_{a},u) = 1\]
+
+The elasticity of effort with respect to wage is 1. 
+
+Let $w*$ and $L*$ denote the values of $w$ and $L$ that satisfy our above conditions. Total labor demanded becomes $NL*$ if the labor supply is $\bar{L}$ the fraction unemployed is $\bar{L} - NL*$. If $NL* > \bar{L}$, wages will increase to the point where supply and demand are in balance. 
+Summers (1988) supposed that effort is given by:
+
+\[e = (\frac{w-x}{x})^{\beta}\ \text{if}\ w > x\]
+
+\[e = 0\ \text{if}\ w < x\]
+
+\[x = (1-bu)w_{a}\]
+
+where $0< \beta < 1$ and $b > 0$. $x$ is a measure of labor-market conditions. $\beta$ represents the elasticity of effort with respect to the premium firms pay over the index of labor-market conditions. If $b$ equals 1, $x$ is the wage paid at other firms multiplied by the fraction of workers who are employed. If $b <1$, workers put less weight on unemployment; this could occur if there are unemployment benefits or if workers value leisure. If $b> 1$ workers greatly fear unemployment. If $w > x$, effort increases less than proportionately with $w-x$. 
+
+Recall that:
+\[\frac{\partial Profit}{\partial w}: we_{1}(w,w_{a},u)/e(w,w_{a},u) = 1\]
+
+
+\[ \beta\frac{w}{(\frac{w-x}{x})^{\beta}} (\frac{w-x}{x})^{\beta -1}(\frac{1}{x})= 1\]
+
+\[\beta \frac{w}{w-x} = 1\]
+
+\[w= \frac{1}{\beta}(w-x)\]
+
+\[w - \frac{1}{\beta}(w)= \frac{-x}{\beta}\]
+
+\[w (\frac{\beta - 1}{\beta})= \frac{-x}{\beta}\]
+
+\[w = \frac{x}{1-\beta} = \frac{(1-bu)w_{a}}{1-\beta}\]
+
+$\therefore$ when $\beta$ is small, firms offer a premium of approximately fraction $\beta$ over the index of labor-market opportunities $x$. As the unemployment rate decreases, wages should fall. In equilibrium $w_{a} = w$:
+
+\[w_{a}(1-\beta) = (1-bu)w_{a}\]
+
+\[\frac{\beta}{b} =u\]
+
+Meaning, the equilbirium unemployment rate depends only on the parameters of the effort function. 
+
+If a firm simply sets its wages to the prevailing market rate, $w_{a}$, the firm has effective cost per unit of labor, $w_{a}/e$, of:
+
+\[C_{w*} = \frac{w_{a}}{e(w,w_{a},u)}\]
+
+\[C_{w*} = \frac{w_{a}}{(\frac{w_{a}-x}{x})^{\beta}}\]
+
+\[C_{w*} = \frac{w_{a}}{(\frac{w_{a}-(1-bu)w_{a}}{(1-bu)w_{a}})^{\beta}}\]
+
+\[C_{w*} = \frac{w_{a}}{(\frac{bu}{(1-bu)})^{\beta}}\]
+
+\[C_{w*} = w_{a}(\frac{1-bu}{bu})^{\beta}\]
+
+
+If a firm sets its own wage, the effective cost per unit of labor becomes:
+
+\[C_{w} = \frac{w}{e(w,w_{a},u)}\]
+
+\[C_{w} = \frac{x/(1-\beta)}{(\frac{x/(1-\beta)-x}{x})^{\beta}}\]
+
+\[C_{w} = x/(1-\beta)((1-\beta)/\beta)^{\beta}\]
+
+\[C_{w} = (1-bu)w_{a}/(1-\beta)^{\beta-1}(1/\beta)^{\beta}\]
+
+
+
+We can use these two derivations to analyze the expected gain for a firm if they decide to cut costs. Suppose $\beta = 0.06$ and $b = 1$, this implies an unemployment rate of 6\%. If the unemployment rate increases to 9\% and other firms choose not to increase wages, we can anlyze the gains of firms that stick to prevailing market wages versus those that set their own wages:
+
+
+```{r}
+marketWage <- function(mkt,b,beta,newUnemployment){
+  unemployment <- beta/b
+  #print(unemployment)
+  previousMkt <- mkt*((1-b*unemployment)/(b*unemployment))^(beta)
+  newMkt <- mkt*((1-b*newUnemployment)/(b*newUnemployment))^(beta)
+  return((newMkt - previousMkt)/previousMkt)
+}
+marketWage(1,1,0.06,0.09) #Firms that use market wages have cost savings of 2.6%
+
+plot(marketWage(1,1,0.06,seq(0.01,0.10,by = 0.005)),typ='l',xlab='Unemployment Rate',ylab='Market Wage Change')
+abline(h = 0)
+
+firmWage <- function(mkt,b,beta,newUnemployment){
+  unemployment <- beta/b
+  #print(unemployment)
+  previousMkt <- mkt *(1-b*unemployment)*(1/(beta^beta)) * 1/((1-beta)^(1-beta))
+  newMkt <- mkt *(1-b*newUnemployment)*(1/(beta^beta)) * 1/((1-beta)^(1-beta))
+  return((newMkt - previousMkt)/previousMkt)
+}
+firmWage(1,1,0.06,0.09) #Firms that set their own wages have cost savings of 3.2%
+
+#Gain from setting own wage over the market rate is 0.6%. Worth it with all of the negative consequences? Probably not. 
+marketWage(1,1,0.06,0.09) - firmWage(1,1,0.06,0.09)
+
+
+plot(seq(0.01,0.10,by = 0.005),marketWage(1,1,0.06,seq(0.01,0.10,by = 0.005)),typ='l',xlab='Unemployment Rate',ylab='Wage Change',ylim=c(-0.05,0.1))
+lines(seq(0.01,0.10,by = 0.005),firmWage(1,1,0.06,seq(0.01,0.10,by = 0.005)),col = 2)
+abline(h = 0)
+
+```
+
+
+

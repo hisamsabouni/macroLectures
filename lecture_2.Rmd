@@ -1,0 +1,242 @@
+---
+title: "ECON 302: Lecture 2"
+author: "Hisam Sabouni"
+date: "9/17/2018"
+output: pdf_document
+linestretch: 1.5
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(quantmod)
+```
+
+##Overview 
+
+In this lecture we will discuss the role of money in an economy and discuss the effects of inflation. Money has three purposes: it is a store of value, a unit of account, and a medium of exchange. The quantity of money available in an economy is called the money supply. Central banks have partial control over the money supply through the implementation of monetary policy.
+
+##Measures of Money
+
+Money is typically measured at a variety of levels by varying the \emph{liquidity} of the type of money. Currency is the most liquid (cash and coins). Demand deposits, cashiers checks, other types of checking accounts are the next level. Savings accounts/money market funds (short-term investment funds) are less liquid. Detailed amounts of the various categories of money are available on an up-to date basis from the Federal Reserve for the United States: https://www.federalreserve.gov/releases/h6/current/
+
+> * M1 = Currency + Demand Deposits + Travelers Checks + Other Checkable Deposits
+
+> * M2 = M1 + Retail Money Market Mutual Funds + Savings Deposits + Small Time Deposits (Less than 
+$100k)
+
+```{r}
+#M1 Money Stock (M1)
+getSymbols('M1',src = 'FRED')
+head(M1)
+plot(M1)
+
+#M2 Money Stock (M2)
+getSymbols('M2',src = 'FRED')
+plot(M2)
+```
+
+It is important to understand that the amount of money in an economy differs from the amount of cash in the economy. Banks and lending institutions have the ability to increase the amount of money in circulation through the fractional-reserve banking system. The fractional-reserve banking system allows banks to hold only a \emph{fraction} of the original deposit of an individual and lend out the remaining balance. Currently, banks that have deposits over \$122.3 million are required to keep 10\% of deposits as reserves ($rr$) and can lend out \textbf{up to} 90\% of deposits (https://www.federalreserve.gov/monetarypolicy/reservereq.htm). Given that money moves from one bank to another, every dollar deposited in a bank becomes roughly $1/rr$ dollars. 
+
+Consider an economy with C dollars in cash in circulation and D dollars deposited in banks. The money supply is:
+
+\[M = C + D\]
+
+The monetary base is the sum of cash held by the public and reserves held by banks:
+
+\[B = C + R\]
+
+We can use these equations to describe how the money supply varies as a function of the monetary base ($B$), the required reserve ratio ($rr$) and the currency-deposit ratio ($cr$):
+
+\[\frac{M}{B} = \frac{C + D}{C + R}\]
+
+\[\frac{M}{B} = \frac{C/D + 1}{C/D + R/D}=\frac{cr + 1}{cr + rr}\]
+
+\[M = B* \frac{cr + 1}{cr + rr}\]
+
+The term $\frac{cr + 1}{cr + rr}$ is called the \textbf{money-multiplier}. 
+
+```{r}
+#M1 Money Multiplier (MULT)
+getSymbols('MULT',src = 'FRED')
+plot(MULT)
+```
+
+On any given day when a bank has less cash than required by the reserve ratio, the bank can borrow money from the Federal Reserve at the Federal Funds rate to cover the requirement. 
+
+```{r}
+#Effective Federal Funds Rate (FEDFUNDS)
+getSymbols('FEDFUNDS',src = 'FRED')
+plot(FEDFUNDS,ylab='%')
+```
+
+The Fed changes the Federal Funds rate to incentivise banks to meet the reserve-requirements they set. When the Federal Funds rate is high, banks are motivated to make sure they keep adequate reserves, which leads to less lending and a reduction in the money supply. When the Federal Funds rate is low, banks are not motivated to make sure they keep adequate reserves, which leads to more lending and an increase in the money supply. 
+
+```{r}
+# Excess Reserves of Depository Institutions (EXCSRESNS)
+getSymbols('EXCSRESNS',src='FRED')
+plot(EXCSRESNS)
+```
+
+
+##Quantity Theory of Money
+
+Now that we have a general sense of the amount of money in an economy, we can attempt model the long-run affects money has on the economy. 
+
+Quantity equation:
+
+\[Money * Velocity = Price * Transactions\]
+
+\[MV = PY\]
+
+Velocity measures the rate at which money circulates in the economy; that is the number of times a dollar bill changes hands in a given period of time. Generally, we use this equation in the income velocity of money interpretation: Y is the total output of the economy (Real GDP) and P is the price level of one unit of output (GDP Defoliator) (making PY = Nominal GDP). 
+
+###Money Demand Function
+
+$M/P$ is called real money balances, which represents the purchasing power of the stock of money. A money demand function is an equation that shows the determinants of the quantity of real money balances people wish to hold. For example:
+
+\[(M/P)^{d} = kY\]
+
+where $k$ is a constant that tells us how much money people want to hold for every dollar of income. If we assume that $V = \frac{1}{k}$, we are back to the original quantity theory of money equation. When people want to hold a lot of money for each dollar of income ($k$ is large), money changes hands infrequently ($V$ is small). When people want to hold only a little money ($k$ is small), money changes hands frequently ($V$ is large).
+
+```{r}
+#Velocity of M1 Money Stock (M1V)
+getSymbols('M1V',src = 'FRED')
+plot(M1V)
+```
+
+While the velocity of money does vary quite substantially overtime as individuals money demand function changes, we can make a simplifying assumption that the velocity of money is a constant. 
+
+\[M\bar{V} = PY\]
+
+Given that $V$ is a constant, changes in $M$ must cause a proportionate change in nominal GDP. Recall that the production function that governs output is a function of capital and labor (both paid real amounts equal to their marginal productivity). Therefore, productivity alone determines real GDP and the quantity of money determines nominal GDP. Taking logarithms and applying a difference operator:
+
+\[\Delta \% M + \Delta \% V = \Delta \% P + \Delta \% Y\]
+
+With the assumption that $V$ is a constant, we have that $\Delta \% V = 0$. Changes in output ($\Delta \% Y$) are exogenous (contingent upon capital,labor, and technology). $\Delta \% P$ represents changes in price level (i.e. inflation). Therefore, changes in the money supply lead to changes in inflation. If the central bank keeps the money supply stable the price level will be stable. If the central bank increases the money supply rapidly, the price level will rise rapidly.
+
+```{r}
+#M2 Money Stock (M2SL)
+getSymbols('M2SL',src = 'FRED')
+M2.change <- M2SL
+M2.change <- to.quarterly(M2.change)
+head(M2.change)
+M2.change <- M2.change[,4]
+M2.change <- 100*Delt(M2.change,type='log',k=4)
+head(M2.change)
+
+#Gross Domestic Product: Implicit Price Deflator (GDPDEF)
+getSymbols('GDPDEF',src = 'FRED')
+deflator <- GDPDEF
+deflator<- 100*Delt(deflator,type='log',k=4)
+head(deflator,20)
+df <- merge(M2.change,deflator)
+which(is.na(df),arr.ind = T)
+head(df,100)
+View(df)
+tail(df)
+df <- na.omit(df)
+head(df)
+plot(as.numeric(df[,1]),as.numeric(df[,2]),main='Short-Run',xlab='Money Supply Growth',ylab='GDP Deflator Growth')
+
+df$Decade <- substr(index(df),3,3)
+head(df)
+average_m1_by_decade <- tapply(df[,1],df[,3],mean)
+average_cpi_by_decade <- tapply(df[,2],df[,3],mean)
+head(average_cpi_by_decade)
+plot(average_m1_by_decade,average_cpi_by_decade,xlim=c(0,12),main='Long-Run',xlab='Money Supply Growth',ylab='CPI Growth')
+text(average_m1_by_decade,average_cpi_by_decade,names(average_m1_by_decade),pos = 2)
+```
+
+##Inflation and Interest Rates
+
+Inflation directly effects wealth over time. Interest is paid to investors as a reward for lending their money out. Ideally, interest should compensate investors for their time and return their capital back with its original purchasing power. The Fisher equation summarizes this concept:
+
+\[i = r + \pi\]
+
+where $i$ is the nominal interest rate, $r$ is the real interest rate, and $\pi$ is the inflation rate. Through the dynamics of the quantity theory of money and the Fisher equation, we have that a one percent increase in the money supply leads to a one percent increase in inflation which leads to a one percent increase in nominal interest rates (Fisher effect). 
+
+```{r}
+#Consumer Price Index for All Urban Consumers: All Items (CPIAUCSL)
+#3-Month Treasury Constant Maturity Rate (GS3M)
+getSymbols(c('CPIAUCSL','GS3M'),src = 'FRED')
+CPI.Growth <- 100*Delt(CPIAUCSL,k = 12,type = 'log')
+df <- na.omit(merge(CPI.Growth,GS3M))
+head(df)
+plot(df[,1],ylim=c(min(df),max(df)))
+lines(df[,2],col =2)
+cor(df)
+```
+
+Given that an investment is something that occurs in the future, we can actually state that the investors need to be compensated for \emph{expected} inflation:
+
+\[i = r + E(\pi)\]
+
+##Nominal Interest Rate and Demand for Money
+
+Earlier we created a simple model for estimating the demand for money $(M/P)^{d} = kY$. Given that we now have an understanding of inflation and interest rates, we can attempt to create a more sophisticated measure of demand that is a function of nominal rates and output, such as:
+
+\[(M/P)^{d} = Y (1+i)/i\]
+
+\[(M/P)^{d} = Y (1+r+E\pi)/(r+E\pi)\]
+
+
+Now we have that the money demanded today is a function of the expected price levels in the future. 
+
+```{r}
+#Money demand
+plot((1+seq(0.01,0.2,by=0.01))/seq(0.01,0.2,by=0.01),seq(0.01,0.2,by=0.01),type = 'l',ylab='i',xlab='M/P')
+
+##Assume that output and real rates are fixed##
+output <- 1
+real_r <- 0.02
+
+##Let money supply grow at a rate of 2% at first##
+M <- 100
+mG1 <- 0.02
+##Assume that expected inflation is exactly equal to future money growth##
+expected_inflation1 <- mG1
+##A shock increases money growth to 3% permanently##
+mG2 <- 0.03
+expected_inflation2 <- mG2
+
+#Fisher Equation#
+nominal_r1 <- real_r + mG1
+nominal_r2 <- real_r + mG2
+
+#Time periods before shock#
+region_1 <- 0:10
+#Time periods after shock#
+region_2 <- 10:20
+#Money supply in region 1#
+initial_M <- M*(1+mG1)^(region_1)
+#Money supply in region 2; growth picks up from last period#
+shifted_M <- initial_M[length(initial_M)]*(1+mG2)^(region_1)
+
+#Let M/P = (Y*(1+i)/i) -> downward sloping liquidity preference;
+#We'll formally derive this later in the course#
+initial_P <- initial_M/(output*(1+rep(nominal_r1,11))/rep(nominal_r1,11))
+shifted_P <- shifted_M/(output*(1+rep(nominal_r2,11))/rep(nominal_r2,11))
+
+
+##Plot out evolution of money supply##
+plot(region_1,initial_M,xlim=c(0,20),ylim=c(90,200),typ='l',main='',xlab='',ylab='Money Supply')
+lines(region_2,shifted_M)
+abline(v = 10,lty = 2)
+
+##Plot out evolution of expected inflation##
+plot(region_1,rep(expected_inflation1,11),typ = 'l',xlim=c(0,20),ylim = c(0,0.04),main='',xlab='',ylab='Expected Inflation')
+lines(region_2,rep(expected_inflation2,11))
+abline(v = 10,lty = 2)
+
+##Plot out evolution of nominal interest rate##
+plot(region_1,rep(nominal_r1,11),typ='l',xlim=c(0,20),ylim = c(0,0.08),main='',xlab='',ylab='Nominal Interest Rate')
+lines(region_2,rep(nominal_r2,11))
+abline(v = 10,lty = 2)
+
+##Plot out evolution of price level##
+plot(region_1,initial_P,typ='l',xlim=c(0,20),ylim = c(0,10),main='',xlab='Time',ylab='P')
+lines(region_2,shifted_P)
+abline(v = 10,lty = 2)
+```
+
+
