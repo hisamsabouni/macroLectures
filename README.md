@@ -1,5 +1,5 @@
-# macroLectures
-Macroeconomics at Claremont Graduate University
+
+# Macroeconomics at Claremont Graduate University
 
 
 
