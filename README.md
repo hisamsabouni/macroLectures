@@ -12,5 +12,5 @@ All of the files are generated in R-markdown files to allow you to see all of th
 
 If you have any questions feel free to email me at hisam.sabouni@cgu.edu
 
-I am an adjunct professor at Claremont Graduate Universtiy in the department of economics. 
+I am an adjunct professor at Claremont Graduate Universtiy in the department of economic sciences.
 
