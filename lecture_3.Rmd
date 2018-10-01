@@ -16,11 +16,11 @@ knitr::opts_chunk$set(echo = TRUE,tidy.opts=list(width.cutoff=45),tidy=TRUE,warn
 ```
 
 
-Civilian noninstitutional population is defined as persons 16 years of age and older residing in the 50 states and the District of Columbia, who are not inmates of institutions (e.g., penal and mental facilities, homes for the aged), and who are not on active duty in the Armed Forces.
+Civilian non-institutional population is defined as persons 16 years of age and older residing in the 50 states and the District of Columbia, who are not inmates of institutions (e.g., penal and mental facilities, homes for the aged), and who are not on active duty in the Armed Forces.
 
-Civilian noninstitutional population = Labor force + Not in Labor force
+Civilian non institutional population = Labor force + Not in Labor force
 
-The labor force participation rate is the ration of the labor force to the civilian noninstitutional population:
+The labor force participation rate is the ration of the labor force to the civilian non institutional population:
 
 ```{r}
 library(quantmod)
@@ -102,11 +102,13 @@ job_separation <- 1/(job_separation*12)
 unemployment_rate <- 1/(job_finding/job_separation  + 1)
 plot(100*unemployment_rate,main='Unemployment Rate',ylab='%')
 lines(UNRATE,col = 2)
+legend('topleft',legend = c('Model','Actual'),lty = 1,col = 1:2)
 ```
+
 
 As the rate of job finding increases we have the a decreasing fraction of the labor force that is unemployed. 
 
-Any policy aimed at lowering the natural rate of unemployment must either reduce the rate of job separation or increase the rate of job finding. For example, government programs that help disiminate information about job vacancies are increasing the rate of job finding, while programs such as unemployment insurance tend reduce the rate of job finding (~50\% of former wage for up to 26 weeks). 
+\textbf{Any policy aimed at lowering the natural rate of unemployment must either reduce the rate of job separation or increase the rate of job finding. For example, government programs that help disseminate information about job vacancies are increasing the rate of job finding, while programs such as unemployment insurance tend reduce the rate of job finding (~50\% of former wage for up to 26 weeks).} 
 
 If job finding were instantaneous ($f=1$) then all individuals that become unemployed ($s$) would be able to immediately find work. When $f <1$ there exist frictions in the labor market. Frictions in the labor market arise when workers have different abilities than what jobs require, when there are geographic restrictions (eg. shortage of workers in New York versus excess supply of workers in California),or, when there is limited information flow regarding vacancies. A change in composition of demand among industries or regions is called a sectoral shift. 
 
@@ -140,6 +142,165 @@ legend('topright',legend = colnames(sectoral_employment_percent),lty = 1,col = 1
 ```
 
 
+
+#Job Search Models
+
+\textbf{Citation Note} Section is heavily borrowed from Quantecon: https://lectures.quantecon.org/py/mccall_model.html, an excellent resource by Sargent and Stachurski that I recommend you all take a look at.
+
+Models that attempt to capture the dynamics of the labor matching market are called job search models. One of the first models was proposed in 1970 by McCall. McCall modeled job search as a function of current and likely future wages, impatience, and unemployment compensation. 
+
+##Set up
+
+An unemployed worker receives in each period a job offer at wage $W_{t}$
+
+At time $t$, the worker has two choices:
+
+> 1. Accept an offer and work permanently at constant wage $W_{t}$
+
+> 2. Reject the offer, receive unemployment compensation $c$, and reconsider next period
+
+The wage sequence $\{W_{t}\}$ is assumed to be iid with probability mass function $p_{1},\dots,p_{n}$. Here $p_{i}$ is the probability of observing wage offer $W_{t} = w_{i}$ in the set $w_{1},\dots,w_{n}$. The worker is infinitely lived and aims to maximize the expected discounted sum of earnings:
+
+\[E\sum_{t = 0}^{\infty}\beta^{t}Y_{t}\]
+
+$\beta \in (0,1)$ is the discount factor, where the closer to zero $\beta$ is the more the worker discounts future utility relative to current utility. 
+
+$Y_{t}$ is income, that is equal to wage $W_{t}$ when employed and $c$ unemployment compensation when unemployed. The worker faces a trade-off, where waiting too long for a good offer is costly, since the future is discounted and accepting too early is costly, since better offers might arrive in the future. We can use dynamic programming to tackle this issue. 
+
+Dynamic programming refers to a collection of algorithms that can be used to compute optimal policies given a perfect model of the environment as a Markov decision process (MDP). The key idea of dynamic programming is the use of value functions to organize and structure the search for good policies (eg. actions to take in a particular state). See Sutton and Barto's 1998 book on Reinforcement learning for more. 
+
+The value function in our McCall model should aim to balance the trade off of current and future rewards:
+
+> 1. The current payoffs we get from different choices
+
+> 2. The different states that those choices will lead to next period. 
+
+Let $V(w)$ be the total lifetime value accruing to an unemployed worker who enters the current period unemployed but with wage offer $w$ in hand. Think of $V(w)$ as a function that assigns to each possible wage $w$ the maximal lifetime value that can be obtained with that offer in hand. 
+
+\[V(w) = max\{ \frac{w}{1-\beta},c + \beta \sum_{i=1}^{n}V(w_{i})p_{i}\}\]
+
+For every possible $w_{i}$ in $w_{1},\dots,w_{n}$.
+
+One should note that the above is a piece-wise linear function (i.e. non-linear).
+
+The first term in the max operation is the lifetime payoff from accepting current offer $w$, since $\sum_{i = 1}^{\infty} w\beta^{i} = \frac{w}{1-\beta}$.
+
+The second term is the continuation value, which is the lifetime payoff from rejecting the current offer and then behaving optimally in all subsequent periods.
+
+Given a state $w$ our McCall worker needs to decide whether to reject or accept the offer. Therefore, we have to map from $\mathbb{R}$ to $\{0,1\}$, where 1 means accept and 0 means reject:
+
+\[\sigma(w) := \textbf{1}\{\frac{w}{1-\beta}\ge c+\beta\sum_{i=1}^{n}V(w_{i})p_{i}\}\]
+
+or,
+
+\[\sigma(w) := \textbf{1}\{w \ge \bar{w}\}\]
+
+where
+
+\[\bar{w} = (1-\beta)(c+\beta\sum_{i=1}^{n}V(w_{i})p_{i})\}\]
+
+\textbf{Here $\bar{w}$ is called the reservation wage. The agent should accept if and only if the current wage offer exceeds the reservation wage.}
+
+We can iteratively approximate the value function by evaluating the function at a variety of wages.
+
+More precisely, we can use the following algorithm to approximate the value function:
+
+1. Pick an arbitrary initial guess $v \in \mathbb{R}^{n}$
+
+2. Compute a new vector $v' \in \mathbb{R}^{n}$ via:
+
+\[v_{i}' = max\{ \frac{w}{1-\beta},c + \beta \sum_{i=1}^{n}v_{i}p_{i}\}\]
+
+3. Calculate a measure of the deviation between $v$ and $v'$, such as $max_{i}|v_{i} - v_{i}'|$
+
+4. If the deviation is larger than some fixed tolerance, set $v = v'$ and go to step 2, else continue.
+
+5. Return $v$
+
+The above algorithm will converge on the true solution as the fixed tolerance goes to zero (See Banach contraction mapping).
+
+To put the ideas above into action we can create a distribution of wages that our McCall worker will observe:
+
+
+```{r}
+#McCall Search Model
+n <- 50
+w_min <- 10
+w_max <- 60
+w_vals <- seq(w_min,w_max,length.out = n + 1)
+set.seed(1)
+dist_pdf<-diff(pnorm(c(10,w_vals),mean=mean(w_vals),sd=sd(w_vals)/2))
+
+plot(w_vals,dist_pdf,type = 'h',ylab='Probability',xlab='Wage')
+```
+
+
+In the code above we arbitrarily create 51 wages ranging from 10 to 60 and assign probabilities to observing each wage through a normal distribution with a mean of 35 and a standard deviation of 7.4. 
+
+We can now write a function that implements dynamic programming for our McCall worker to find the reservation wage (i.e. the wage at which point the worker is indifferent between working and remaining unemployed). Recall that the reservation wage is reliant on the individuals discount factor as well as on the unemployment benefits the receive. 
+
+
+```{r}
+compute_reservation_wage <- function(benefits,beta,w_val,p_val,max_iter=500,tol=1e-6,generatePlots = T){
+  v <- w_val/(1-beta) #Value of accepting wage
+  v_prime <- rep(0,length(v)) #Create v'
+  i <- 0
+  error <- tol + 1
+  while(i < max_iter & error > tol){
+    for(j in 1:length(w_val)){
+      accept_val <- w_val[j]/(1-beta) #Value of accetping wage
+      continue_val <- benefits + beta*sum(v*p_val) #Value of continuing
+      v_prime[j] <- max(accept_val,continue_val) #Choose maximum
+    }
+    error <- max(abs(v_prime - v)) #Estimate error
+    
+    v <- v_prime #Replace V with new V
+    if(generatePlots){
+      if(i==0){
+        plot(w_val,v,type = 'l',ylim=c(2500,6000))
+      }else{
+        lines(w_val,v,col = i)
+      }
+    }
+    i <- i + 1
+  }
+    
+  return((1-beta)*(benefits+beta*sum(v*p_val)))
+}
+
+compute_reservation_wage(benefits = 25,beta=0.99,w_val=w_vals,p_val = dist_pdf,generatePlots=T)
+```
+
+
+
+As we can see above, we have a piece-wise linear function that slowly converges on a reservation wage of approximately 46.1, for a worker with unemployment benefits of 25 and a discount factor ($\beta$) of 0.99. We can now use this model to see how an individuals reservation wage will vary based on the unemployment benefits they receive and on their individual patience. 
+
+
+```{r}
+unemployment_benefits <- seq(0,30,length.out = 10)
+discount_factor <- seq(0.9,0.99,length.out = 10)
+statics_matrix <- matrix(NA,10,10)
+for(j in 1:ncol(statics_matrix)){
+  for(i in 1:nrow(statics_matrix)){
+    statics_matrix[i,j] <- compute_reservation_wage(benefits = unemployment_benefits[j],beta=discount_factor[i],w_val=w_vals,p_val = dist_pdf,generatePlots=F)
+  }
+}
+plot(statics_matrix[,1],discount_factor,ylab ='beta',xlab='Wage',xlim=c(min(statics_matrix),max(statics_matrix)),type = 'l')
+for(i in 2:ncol(statics_matrix)){
+  lines(statics_matrix[,i],discount_factor,col = i)
+}
+text(statics_matrix[1,],rep(0.91,ncol(statics_matrix)),round(unemployment_benefits),pos=4)
+text(44,0.91,'<- Unemployment Benefits')
+pnorm(statics_matrix[nrow(statics_matrix),ncol(statics_matrix)],mean(w_vals),sd(w_vals)/2)
+```
+
+
+
+As you can see above, as individuals have higher patience they will have a higher reservation wage. Furthermore, as they have higher unemployment benefits, they will also have a higher reservation wage. In both cases, having higher benefits and being more patient allows individuals to wait out longer for a potentially higher wage. In our highest simulated case with unemployment benefits at 30 and a discount factor of 0.99, the McCall worker has a reservation wage of 46.7, which is in the 94-th percentile of wages implied by our simulated distribution. 
+
+
+#Wage Rigidity
+
 Unemployment is also caused by wage rigidity; the failure of wages to adjust to a level at which labor supply equals labor demand. Wage rigidity arises due to:
 
 > * Minimum wage laws: The minimum wage may exceed the equilbrium wage of unskilled wokers (effects teenagers). Half of all hourly-paid workers earning the minimum wage or less are under 25.  
@@ -165,7 +326,7 @@ Where $Y$ is the firm's output, $w$ is the wage that it pays, and $L$ is the amo
 
 \[Y = F(eL),\  F' > 0,\ F'' < 0\]
 
-where $e$ denotes workers' effort. Let the level of effort could be a function of the wage they recieve $w$, the wage paid by other firms $w_{a}$, and the unemployment rate $u$:
+where $e$ denotes workers' effort. Let the level of effort could be a function of the wage they receive $w$, the wage paid by other firms $w_{a}$, and the unemployment rate $u$:
 
 \[e = e(w,w_{a},u),\ e_{1} > 0,\ e_{2} < 0,\ e_{3} > 0\]
 
@@ -220,7 +381,7 @@ $\therefore$ when $\beta$ is small, firms offer a premium of approximately fract
 
 \[\frac{\beta}{b} =u\]
 
-Meaning, the equilbirium unemployment rate depends only on the parameters of the effort function. 
+Meaning, the equilibrium unemployment rate depends only on the parameters of the effort function. 
 
 If a firm simply sets its wages to the prevailing market rate, $w_{a}$, the firm has effective cost per unit of labor, $w_{a}/e$, of:
 
@@ -247,7 +408,7 @@ If a firm sets its own wage, the effective cost per unit of labor becomes:
 
 
 
-We can use these two derivations to analyze the expected gain for a firm if they decide to cut costs. Suppose $\beta = 0.06$ and $b = 1$, this implies an unemployment rate of 6\%. If the unemployment rate increases to 9\% and other firms choose not to increase wages, we can anlyze the gains of firms that stick to prevailing market wages versus those that set their own wages:
+We can use these two derivations to analyze the expected gain for a firm if they decide to cut costs. Suppose $\beta = 0.06$ and $b = 1$, this implies an unemployment rate of 6\%. If the unemployment rate increases to 9\% and other firms choose not to increase wages, we can analyze the gains of firms that stick to prevailing market wages versus those that set their own wages:
 
 
 ```{r}
