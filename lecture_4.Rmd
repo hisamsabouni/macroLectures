@@ -1,0 +1,493 @@
+---
+title: 'Lecture 4: Long-Run Growth'
+author: "Hisam Sabouni"
+date: "10/8/2018"
+output: pdf_document
+linestretch: 1.5
+---
+
+\fontfamily{qtm}
+\fontsize{12}{12}
+\selectfont
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,tidy.opts=list(width.cutoff=45),tidy=TRUE,warning = F,message = F,fig.align = 'center')
+```
+
+#Overview
+
+The Solow-Swan growth model shows how saving, population growth, and technological progress affect the level of an economy's output and its growth over time. Economic growth is extremely important as it helps shed light on the vast differences in standards of living over time and across countries. The Solow model is the starting point for almost all analyses of growth.
+
+#Model Setup
+
+The Solow model focuses on four variables: output ($Y$), capital ($K$), labor ($L$), and knowledge or effectiveness of labor ($A$).
+
+\[Y(t) = f(K(t),A(t)L(t)\]
+
+The model implies that output over time varies only if the inputs ($K$, $L$, or $A$) change. $AL$ is the total amount of effective labor. As before, we will assume that the production function satisfies constant returns to scale and the Inada conditions. We can simplify our production function by analyzing the amount of capital available for each unit of effective labor:
+
+\[\frac{Y(t)}{A(t)L(t)} = f(\frac{K(t)}{A(t)L(t)},1)\]
+
+Here we can let $k(t) = \frac{K(t)}{A(t)L(t)}$, making our production function $y(t) = f(k)$. We make the following assumptions on the dynamics of $L$, $K$, and $A$:
+
+$\dot{K}(t) = sY(t) - \delta K(t)$
+
+$\dot{L}(t) = nL(t)$
+
+$\dot{A}(t) = gA(t)$
+
+Capital is assumed to change over time as a function of savings $s$ and depreciation $\delta$. We assume constant population growth $n$ and constant technological growth $g$. A $\dot{}$ above a variable denotes the derivative with respect to time $\dot{X}(t) = \partial X(t)/\partial t$. The growth rate of a variable equals the rate of change of its natural logarithm:
+
+\[\frac{\partial lnX(t)}{\partial t} = \frac{1}{X(t)} \dot{X}(t)\]
+
+Therefore, given that $L$ and $A$ are assumed to grow at constant rates $n$ and $g$, we are actually imposing exponential growth:
+
+\[ln L(t) = ln L(0) + nt \rightarrow L(t) = L(0)e^{nt}\]
+
+\[ln A(t) = ln A(0) + gt\rightarrow A(t) = A(0)e^{gt}\]
+
+Given that we have imposed dynamics on $K$, $L$, and $A$ we can model the overall dynamics of the economy by analyzing the capital per unit of effective labor $k(t) = \frac{K(t)}{A(t)L(t)}$.
+
+\[\dot{k}(t)=\frac{\partial k(t)}{\partial t} = \frac{\dot{K}(t)A(t)L(t) - K(t)[\dot{A}(t)L(t) + A(t)\dot{L}(t)]}{(A(t)L(t))^{2}} \ \ \ \text{(Quotient Rule)}\]
+
+\[\dot{k}(t)=\frac{\partial k(t)}{\partial t} = \frac{\dot{K}(t)}{A(t)L(t)}-\frac{K(t)}{A(t)L(t)}\frac{\dot{A}(t)}{A(t)}-\frac{K(t)}{A(t)L(t)}\frac{\dot{L}(t)}{L(t)}\]
+
+\[\dot{k}(t)=\frac{\partial k(t)}{\partial t} = \frac{\dot{K}(t)}{A(t)L(t)}-gk(t)-nk(t)\]
+
+\[\dot{k}(t)=\frac{\partial k(t)}{\partial t} = \frac{sY(t)-\delta K(t)}{A(t)L(t)}-gk(t)-nk(t)\]
+
+\[\dot{k}(t)=\frac{\partial k(t)}{\partial t} = \frac{sY(t)}{A(t)L(t)}-\delta k(t)-gk(t)-nk(t)\]
+
+\[\dot{k}(t)=\frac{\partial k(t)}{\partial t} = sf(k(t))-\delta k(t)-gk(t)-nk(t)\]
+
+While the math may seem complex, this is an extraordinary simple model that assumes the existence of a single good; no government; no fluctuations in employment etc. Above is the core equation of the Solow model, where capital accumulation over time is a function of savings, depreciation, population growth, and technological growth. In essence, each period the economy needs to add more capital to offset the rates of depreciation, population, and technological growth (here $(n + g + \delta)k(t)$ is known as break-even investment).  
+
+The model is said to be in a steady-state when capital accumulation per unit of effective labor is neither growing nor shrinking:
+
+
+\[\dot{k}(t)=0= sf(k(t))-\delta k(t)-gk(t)-nk(t)\]
+
+\[sf(k(t))=(\delta+g+n)k(t)\]
+
+
+Given a production function and parameters for $\delta$, $n$, and $g$ we can solve for the value capital will converge upon in a steady state:
+
+\[\frac{s}{(\delta+g+n)}=\frac{k(t)}{f(k(t))}\]
+
+If we have a Cobb-Douglas production function:
+
+\[Y = K^{\alpha}(AL)^{1-\alpha}\]
+
+\[\frac{Y}{AL} = (\frac{K}{AL})^{\alpha} = k^{\alpha}\]
+
+We can plug this back into our steady state equation and solve for the steady-state level of capital $k(*)$
+\[\frac{s}{(\delta+g+n)}=\frac{k(*)}{k(*)^{\alpha}}\]
+
+\[\frac{s}{(\delta+g+n)}=k(*)^{1-\alpha}\]
+
+\[(\frac{s}{(\delta+g+n)})^{(\frac{1}{1-\alpha})}=k(*)\]
+
+For instance if the rate of savings in the economy is 0.3 (30\% of output; implies consumption of 70\% of output) and depreciation is assumed to be 10\% (ignoring population and technology growth $n = g = 0$), with $\alpha = 1/2$ we have a steady-state of capital at $k(*) = 9$
+
+```{r}
+s <- 0.3
+alpha <- 1/2
+delta <- 0.1
+(s/delta)^(1/(1-alpha))
+```
+
+
+#Simulating Solow
+
+```{r}
+s <- 0.4
+depreciation <- 0.03
+population_growth <- 0.015
+technology_growth <- 0.015
+alpha <- 1/3
+k_star <- ((s)/(depreciation + population_growth + technology_growth))^(1/(1-alpha))
+
+k <- c(2)
+change_in_k <- 1
+itr <- 1
+output_tracker <- c()
+consumption_tracker <- c()
+savings_tracker <- c()
+depreciation_tracker <- c()
+capital_tracker <- c()
+breakeven_tracker <- c()
+
+while(abs(change_in_k) > 1e-5){
+  output <- k[length(k)]^(1/3) #Cobb-Douglas production function with alpha = 1/3
+  output_tracker <- c(output_tracker,output)
+  amt_saved <- output*s #40% of output
+  savings_tracker <- c(savings_tracker,amt_saved)
+  amt_consumed <- output*(1-s)
+  consumption_tracker <- c(consumption_tracker,amt_consumed)
+  capital_deprecicated <- k[length(k)]*depreciation #3% depreciation of capital each period
+  depreciation_tracker <- c(depreciation_tracker,capital_deprecicated)
+  breakeven_tracker <- c(breakeven_tracker,(depreciation + population_growth + technology_growth)*k[length(k)])
+  
+  change_in_k <- amt_saved - (depreciation + population_growth + technology_growth)*k[length(k)]
+  
+  k <- c(k,k[length(k)] + change_in_k)
+  itr <- itr + 1
+}
+#Convergence#
+plot(diff(k),typ='l',ylim=c(0,max(diff(k))),ylab='Change in Capital')
+
+#Plot of all variables#
+plot(k,typ='l',ylim=c(0,max(k)))
+lines(output_tracker,col = 2)
+lines(consumption_tracker,col = 3)
+lines(savings_tracker,col = 4)
+lines(depreciation_tracker,col = 5)
+legend('topleft',legend = c('Capital','Output','Consumption','Savings','Depreciation'),col=c(1:5),lty = 1,cex = 0.7)
+
+#View individually#
+plot(output_tracker,col = 2,typ='l',ylim=c(0,max(output_tracker)),ylab='Output')
+plot(consumption_tracker,col = 3,typ='l',ylim=c(0,max(consumption_tracker)),ylab='Consumption')
+
+#Show convergence on steady state#
+plot(k[2:length(k)],savings_tracker,col = 4,typ='l',ylim=c(0,max(savings_tracker)),ylab='Investment and Depreciation')
+lines(k[2:length(k)],breakeven_tracker)
+legend('topleft',legend = c('sf(k)','(n + g + delta)k'),col = c(4,1),lty = 1,cex = 0.75)
+```
+
+What if we have a shock to savings at some point in our simulation? Suppose every 20 iterations there is a random shock to savings that is drawn from a normal distribution with mean zero and a standard deviation of 0.04: $N(0,0.04)$
+
+
+```{r}
+s <- 0.4
+depreciation <- 0.03
+population_growth <- 0.015
+technology_growth <- 0.015
+k <- c(2)
+change_in_k <- 1
+itr <- 1
+output_tracker <- c()
+consumption_tracker <- c()
+savings_tracker <- c()
+depreciation_tracker <- c()
+capital_tracker <- c()
+breakeven_tracker <- c()
+set.seed(1)
+while(abs(change_in_k) > 1e-5 & itr < 200){
+  output <- k[length(k)]^(1/3)
+  output_tracker <- c(output_tracker,output)
+  amt_saved <- output*s
+  savings_tracker <- c(savings_tracker,amt_saved)
+  amt_consumed <- output*(1-s)
+  consumption_tracker <- c(consumption_tracker,amt_consumed)
+  capital_deprecicated <- k[length(k)]*depreciation
+  depreciation_tracker <- c(depreciation_tracker,capital_deprecicated)
+  breakeven_tracker <- c(breakeven_tracker,(depreciation + population_growth + technology_growth)*k[length(k)])
+  change_in_k <- amt_saved - (depreciation + population_growth + technology_growth)*k[length(k)]
+  k <- c(k,k[length(k)] + change_in_k)
+  itr <- itr + 1
+  
+  if(itr%%20 == 0){
+    s <- s + rnorm(1,0,0.04)
+  }
+}
+#Convergence#
+plot(diff(k),typ='l',ylim=c(0,max(diff(k))),ylab='Change in Capital')
+
+#Plot of all variables#
+plot(k,typ='l',ylim=c(0,max(k)))
+lines(output_tracker,col = 2)
+lines(consumption_tracker,col = 3)
+lines(savings_tracker,col = 4)
+lines(depreciation_tracker,col = 5)
+legend('topleft',legend = c('Capital','Output','Consumption','Savings','Depreciation'),col=c(1:5),lty = 1,cex = 0.7)
+
+#View individually#
+plot(output_tracker,col = 2,typ='l',ylim=c(0,max(output_tracker)),ylab='Output')
+plot(consumption_tracker,col = 3,typ='l',ylim=c(0,max(consumption_tracker)),ylab='Consumption')
+
+
+#Show convergence on steady state#
+plot(k[2:length(k)],savings_tracker,col = 4,typ='l',ylim=c(0,max(savings_tracker)),ylab='Investment and Depreciation')
+lines(k[2:length(k)],breakeven_tracker)
+legend('topleft',legend = c('sf(k)','(n + g + delta)k'),col = c(4,1),lty = 1,cex = 0.75)
+```
+
+
+
+#Golden Rule
+
+Various savings rates imply different amounts of consumption and investment. A higher amount of savings would lead to lower consumption today but would imply a higher-steady state of capital in the economy. We can use our model to derive an optimal savings rate that will allow for maximum consumption known as the golden-rule. 
+
+```{r}
+golden_rule_solow <- function(alpha,depreciation,population_growth,technology_growth){
+  s <- seq(0,1, by = 0.001)
+  k_star <- (s/(depreciation + population_growth + technology_growth))^(1/(1-alpha))
+  y_star <- k_star^(alpha)
+  breakEven <- k_star * (depreciation + population_growth + technology_growth)
+  c_star <- y_star - breakEven
+  mpk <- alpha * k_star^(alpha-1)
+  min_diff <- which.min(abs(mpk - depreciation - population_growth - technology_growth))
+  
+  optimal_s <- s[min_diff]
+  optimal_k <- k_star[min_diff]
+  optimal_y <- y_star[min_diff]
+  optimal_c <- c_star[min_diff]
+  res <- c(optimal_s,optimal_k,optimal_y,optimal_c)
+  names(res) <- c('Savings','Capital','Output','Consumption')
+  plot(s*100,c_star,ylab='c(s)',xlab='Savings %',typ='l',main='Golden Rule Steady State')
+  points(optimal_s*100,optimal_c,col = 4,pch = 19)
+  res
+}
+golden_rule_solow(alpha =1/3,depreciation = 0.03,population_growth = 0.015,technology_growth = 0.1)
+
+```
+
+In the case of a Cobb-Douglas production function the golden-rule level of savings is always equal to $\alpha$. That is the golden-rule level of savings is equal to capitals share of income. 
+
+\[c = (1-s)y\]
+
+\[c = (1-s)k^{\alpha}\]
+
+Recall that in a steady-state:
+
+\[(\frac{s}{(\delta+g+n)})^{(\frac{1}{1-\alpha})}=k(*)\]
+
+\[c = (1-s)(\frac{s}{(\delta+g+n)})^{(\frac{\alpha}{1-\alpha})}\]
+
+\[c = (\frac{s}{(\delta+g+n)})^{(\frac{\alpha}{1-\alpha})} - s(\frac{s}{(\delta+g+n)})^{(\frac{\alpha}{1-\alpha})}\]
+
+
+Your homework assignment will be to show that in for a Cobb-Douglas production function $S^{gold} = \alpha$. (Hint FOC..)
+
+
+#Changes in Savings Rate
+
+As we noted in the simulations, changes in savings have impacts on all aspects of our model, not just consumption. We can analyze how overall output is affected by changes in the savings rate:
+
+\[y^{*} = f(k^{*})\]
+
+\[\frac{\partial y^{*}}{\partial s} = f'(k^{*})\frac{\partial k^{*}}{\partial s}\]
+
+When we are at $k^{*} \rightarrow \dot{k} = 0$. Therefore we have:
+
+\[s f(k^{*}) = (n + g + \delta)k^{*}\]
+
+\[s f'(k^{*})\frac{\partial k^{*}}{\partial s} + f(k^{*}) = (n + g + \delta)\frac{\partial k^{*}}{\partial s}\]
+
+\[\frac{\partial k^{*}}{\partial s} = \frac{f(k^{*})}{(n + g + \delta) - s f'(k^{*})}\]
+
+Now if we go back to $\frac{\partial y^{*}}{\partial s} = f'(k^{*})\frac{\partial k^{*}}{\partial s}$
+
+\[\frac{s}{y^{*}}\frac{\partial y^{*}}{\partial s} = \frac{s}{f(k^{*})}f'(k^{*})\frac{\partial k^{*}}{\partial s}\]
+
+
+\[\frac{s}{y^{*}}\frac{\partial y^{*}}{\partial s} = \frac{s}{f(k^{*})}f'(k^{*})\frac{f(k^{*})}{(n + g + \delta) - s f'(k^{*})}\]
+
+
+\[\frac{s}{y^{*}}\frac{\partial y^{*}}{\partial s} = \frac{(n + g + \delta)k^{*}/f(k^{*})}{f(k^{*})}f'(k^{*})\frac{f(k^{*})}{(n + g + \delta) - (n + g + \delta)f'(k^{*})k^{*}/f(k^{*}) }\]
+
+\[\frac{s}{y^{*}}\frac{\partial y^{*}}{\partial s} = \frac{(n + g + \delta)f'(k^{*})k^{*}/f(k^{*})}{(n + g + \delta) - (n + g + \delta)f'(k^{*})k^{*}/f(k^{*})}\]
+
+
+\[\frac{s}{y^{*}}\frac{\partial y^{*}}{\partial s} = \frac{f'(k^{*})k^{*}/f(k^{*})}{ 1 - f'(k^{*})k^{*}/f(k^{*}) }\]
+
+
+The term $f'(k^{*})k^{*}/f(k^{*})$ represents the elasticity of output with respect to capital ($\alpha_{k}(k^{*})$). 
+
+\[\frac{s}{y^{*}}\frac{\partial y^{*}}{\partial s} = \frac{\alpha_{k}(k^{*})}{ 1 - \alpha_{k}(k^{*}) }\]
+
+In most countries capital share of income is approximately $\frac{1}{3}$. This implies that the elasticity of output with respect to savings is approximately equal to $\frac{1}{2}$. Meaning, if savings rates increase 10\%, we should have an increase in output by $5\%$. Is this a worthwhile trade off for a social planner to face? Should we be willing to save 10\% more for a modest 5\% increase in output? One aspect we might want to take into consideration is time. When we immediately choose to increase savings by 10\% we are also immediately decreasing consumption by 10\%; we need to determine how long the capital accumulation will take in order to reach our new steady-state implied by the higher rate of savings. 
+
+
+```{r}
+K_AL <- matrix(NA,200,4)
+savings_sequence <- seq(0.2, 0.6,length.out = 4)
+for(i in 1:length(savings_sequence)){
+  s <- savings_sequence[i]
+  depreciation <- 0.03
+  population_growth <- 0.015
+  technology_growth <- 0.015
+  k <- c(2)
+  change_in_k <- 1
+  itr <- 1
+  output_tracker <- c()
+  consumption_tracker <- c()
+  savings_tracker <- c()
+  depreciation_tracker <- c()
+  capital_tracker <- c()
+  breakeven_tracker <- c()
+  while(itr < 200){
+    output <- k[length(k)]^(1/3)
+    output_tracker <- c(output_tracker,output)
+    amt_saved <- output*s
+    savings_tracker <- c(savings_tracker,amt_saved)
+    amt_consumed <- output*(1-s)
+    consumption_tracker <- c(consumption_tracker,amt_consumed)
+    capital_deprecicated <- k[length(k)]*depreciation
+    depreciation_tracker <- c(depreciation_tracker,capital_deprecicated)
+    breakeven_tracker <- c(breakeven_tracker,(depreciation + population_growth + technology_growth)*k[length(k)])
+    change_in_k <- amt_saved - (depreciation + population_growth + technology_growth)*k[length(k)]
+    k <- c(k,k[length(k)] + change_in_k)
+    itr <- itr + 1
+  }
+  K_AL[,i] <- k
+}
+
+plot(K_AL[,1],typ='l',ylim=c(0,max(K_AL)),ylab='Capital')
+abline(h = (savings_sequence[1]/0.06)^(1/(1-1/3)),lty = 2,col = 1)
+lines(K_AL[,2],col= 2)
+abline(h = (savings_sequence[2]/0.06)^(1/(1-1/3)),lty = 2,col = 2)
+lines(K_AL[,3],col= 3)
+abline(h = (savings_sequence[3]/0.06)^(1/(1-1/3)),lty = 2,col = 3)
+lines(K_AL[,4],col= 4)
+abline(h = (savings_sequence[4]/0.06)^(1/(1-1/3)),lty = 2,col = 4)
+legend('topleft',legend = paste('Savings % =', round(savings_sequence,2)),col = 1:4,lty = 1,cex= 0.75)
+```
+
+
+#Speed of Convergence
+
+Again recall that capital per unit of effective labor is evolving as a function of savings and offseting population, technological, and depreciation growth:
+
+\[\dot{k} = sf(k) - (n + g + \delta)k\]
+
+Let $\dot{k} = \dot{k}(k)$ where when $k = k^{*}\rightarrow\dot{k}(k^{*}) = 0$. First order Taylor approximation of $\dot{k}(k)$ around $k = k^{*}$:
+
+\[\dot{k} \approx [\frac{\partial \dot{k}}{\partial k}|_{k = k^{*}}](k-k^{*})\]
+
+Let $\lambda = -\frac{\partial \dot{k}}{\partial k}|_{k = k^{*}}$
+
+
+\[\dot{k} \approx -\lambda(k-k^{*})\]
+
+\[k(t) \approx k^{*} + e^{-\lambda t}(k(0) - k^{*})\]
+
+
+\[\lambda = -\frac{\partial \dot{k}}{\partial k} = (n + g + \delta) - sf'(k^{*})\]
+
+
+\[\lambda = -\frac{\partial \dot{k}}{\partial k} = (n + g + \delta) - \frac{f'(k^{*})(n + g + \delta)k^{*}}{f(k^{*})}\]
+
+\[\lambda = (1-\alpha_{k}(k^{*}))(n + g + \delta)\]
+
+Here $\alpha_{k}$ is the elasticity of the production function with respect to capital $k$. Typically $n + g + \delta = 6\%$; where population growth averages 1-2\%, technology averages 1-2\% and capital depreciation averages 3-4\%. Furthermore, capitals share of income is usually around $\frac{1}{3}$, implying $\alpha_{k} = \frac{1}{3}$. This implies a $\lambda = 0.04$.
+
+The rate of convergence is governed by $e^{-\lambda t}$. The time it takes for capital to cover half the gap of the steady state of capital is $e^{-\lambda t} = 0.5 \rightarrow -0.04 t = ln(0.5) \rightarrow t\approx 17$ years. Going back to our elasticity of output with respect to savings. If savings rises by 10\% today that implies a long-run positive impact of +5\% on output; it will take approximately 17 years for output to increase by 2.5\%. 
+
+#Convergence
+
+If we have two countries that have the exact same behaviors but have different starting levels of capital, will the two countries converge upon each other? (By same behavior: same rates of savings, population and technology growth, and rates of depreciation).
+
+```{r}
+K_AL <- matrix(NA,199,2)
+capital_sequence <- c(1,5)
+for(i in 1:length(capital_sequence)){
+  s <- 0.3
+  depreciation <- 0.03
+  population_growth <- 0.015
+  technology_growth <- 0.015
+  k <- capital_sequence[i]
+  change_in_k <- 1
+  itr <- 1
+  output_tracker <- c()
+  consumption_tracker <- c()
+  savings_tracker <- c()
+  depreciation_tracker <- c()
+  capital_tracker <- c()
+  breakeven_tracker <- c()
+  while(itr < 200){
+    output <- k[length(k)]^(1/3)
+    output_tracker <- c(output_tracker,output)
+    amt_saved <- output*s
+    savings_tracker <- c(savings_tracker,amt_saved)
+    amt_consumed <- output*(1-s)
+    consumption_tracker <- c(consumption_tracker,amt_consumed)
+    capital_deprecicated <- k[length(k)]*depreciation
+    depreciation_tracker <- c(depreciation_tracker,capital_deprecicated)
+    breakeven_tracker <- c(breakeven_tracker,(depreciation + population_growth + technology_growth)*k[length(k)])
+    change_in_k <- amt_saved - (depreciation + population_growth + technology_growth)*k[length(k)]
+    k <- c(k,k[length(k)] + change_in_k)
+    itr <- itr + 1
+  }
+  K_AL[,i] <- output_tracker
+}
+
+plot(K_AL[,1],ylab='Output',typ='l')
+lines(K_AL[,2],col = 2)
+legend('bottomright',legend = c(paste('Initial Capital:',capital_sequence,sep=' ')),lty = 1,col =1:2,cex = 0.75)
+
+plot(diff(log(K_AL[,1])),ylab='Output Growth',typ='l')
+lines(diff(log(K_AL[,2])),col = 2)
+legend('bottomright',legend = c(paste('Initial Capital:',capital_sequence,sep=' ')),lty = 1,col =1:2,cex = 0.75)
+```
+
+Countries that are farther away from their steady-state will move faster towards the steady state! We can test this prediction of the Solow model by looking at the deviation from steady-state and the corresponding future rate of output. See a few examples here: http://lhendricks.org/econ520/growth/Solow_Applications_SL.pdf
+
+
+
+#Growth Accounting
+
+\[Y_{t} = K_{t}^{\alpha}(A_{t}L_{t})^{1-\alpha}\]
+
+\[Y_{t} = A_{t}K_{t}^{\alpha}L_{t}^{1-\alpha}\]
+
+\[Y_{t}/L_{t} = (A_{t}/L_{t})(K_{t}/L_{t})^{\alpha}\]
+
+\[log(y_{t}) = log(a_{t}) + \alpha log(k_{t}) \]
+
+\[log(a_{t}) = log(y_{t}) - \alpha log(k_{t})\]
+
+
+```{r}
+#install.packages("pwt8")
+library(pwt8)
+df <- pwt8.1
+df$country <- as.character(df$country)
+df$isocode <- as.character(df$isocode)
+#rgdpna Real GDP at constant 2005 national prices (in million 2005 USD).
+#rkna Capital stock at constant 2005 national prices (in million 2005 USD).
+#emp Number of persons engaged (in millions).
+#labsh Share of labour compensation in GDP at current national prices.
+usa_data <- df[df$isocode=='USA',]
+dkdt <- diff(log(usa_data$rkna/usa_data$emp))
+dydt <- diff(log(usa_data$rgdpna/usa_data$emp))
+alpha <-  1-usa_data[-1,"labsh"]
+tfp <- dydt - alpha*dkdt
+plot(usa_data$year[-1],tfp,type = 'l')
+lines(usa_data$year[-1],diff(log(usa_data$rgdpna)),col = 2)
+
+calculate_tfp <- function(country_code){
+  country_data <- df[df$isocode==country_code,c('year','rkna','emp','rgdpna','labsh')]
+  country_data <- na.omit(country_data)
+  dkdt <- diff(log(country_data$rkna/country_data$emp))
+  dydt <- diff(log(country_data$rgdpna/country_data$emp))
+  alpha <-  1-country_data[-1,"labsh"]
+  tfp <- dydt - alpha*dkdt
+  names(tfp) <- country_data$year[-1]
+  tfp
+}
+
+unique_country_codes <- unique(df$isocode)
+unique_dates <- sort(unique(df$year))
+hold_tfp <- matrix(NA,length(unique_dates),length(unique_country_codes))
+rownames(hold_tfp) <- unique_dates
+colnames(hold_tfp) <- unique_country_codes
+for(country in unique_country_codes){
+  country <- 'USA'
+  step <- calculate_tfp(country_code = country)
+  hold_tfp[match(names(step),rownames(hold_tfp)),country] <- step
+}
+hold_tfp <- as.data.frame(hold_tfp)
+
+plot(unique_dates,hold_tfp$USA,typ='l',ylim=c(-0.05,0.1),main='United States')
+lines(unique_dates,c(NA,diff(log(df[df$isocode == 'USA','rgdpna']))),col = 3)
+
+
+plot(unique_dates,hold_tfp$GBR,typ='l',ylim=c(-0.05,0.1),main='United Kingdom')
+lines(unique_dates,c(NA,diff(log(df[df$isocode == 'GBR','rgdpna']))),col = 3)
+
+plot(unique_dates,hold_tfp$DEU,typ='l',ylim=c(-0.05,0.1),main='Germany')
+lines(unique_dates,c(NA,diff(log(df[df$isocode == 'DEU','rgdpna']))),col = 3)
+
+```
