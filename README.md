@@ -17,5 +17,10 @@ I am an adjunct professor at Claremont Graduate Universtiy in the department of 
 <meta name="google-site-verification" content="k8D4XxckNJHeb488NrWphlNQb-2Y6a_EQZOuLFAyza8" />
 </head>
 
-> 1. [Lecture 1: An introduction to macroeconomics with R](https://github.com/hisamsabouni/macroLectures/blob/master/lecture_1.pdf)
+* 1. [Lecture 1: An introduction to macroeconomics with R](https://github.com/hisamsabouni/macroLectures/blob/master/lecture_1.pdf)
 
+* 2. [Lecture 2: Money, inflation, and interest rates](https://github.com/hisamsabouni/macroLectures/blob/master/lecture_2.pdf)
+
+* 3. [Lecture 3: Unemployment models](https://github.com/hisamsabouni/macroLectures/blob/master/lecture_3.pdf)
+
+* 4. [Lecture 4: Long-Run Economic Growth: Solow-Swan Model](https://github.com/hisamsabouni/macroLectures/blob/master/lecture_4.pdf)
