@@ -14,3 +14,4 @@ If you have any questions feel free to email me at hisam.sabouni@cgu.edu
 
 I am an adjunct professor at Claremont Graduate Universtiy in the department of economic sciences.
 
+<meta name="google-site-verification" content="k8D4XxckNJHeb488NrWphlNQb-2Y6a_EQZOuLFAyza8" />
