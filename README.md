@@ -16,3 +16,6 @@ I am an adjunct professor at Claremont Graduate Universtiy in the department of 
 <head>
 <meta name="google-site-verification" content="k8D4XxckNJHeb488NrWphlNQb-2Y6a_EQZOuLFAyza8" />
 </head>
+
+> 1. [Lecture 1: An introduction to macroeconomics with R](https://github.com/hisamsabouni/macroLectures/blob/master/lecture_1.pdf)
+
