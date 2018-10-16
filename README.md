@@ -20,3 +20,5 @@ I am an adjunct professor at Claremont Graduate Universtiy in the department of 
 [Lecture 3: Unemployment models](https://github.com/hisamsabouni/macroLectures/blob/master/lecture_3.pdf)
 
 [Lecture 4: Long-Run Economic Growth: Solow-Swan Model](https://github.com/hisamsabouni/macroLectures/blob/master/lecture_4.pdf)
+
+[Lecture5: Analyzing Economic Growth and Endogenous Growth Theory](https://github.com/hisamsabouni/macroLectures/blob/master/lecture_5.pdf)
