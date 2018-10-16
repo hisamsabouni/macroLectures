@@ -1,0 +1,638 @@
+---
+title: 'Lecture 5: Analyzing Growth and Endogenous Growth'
+author: "Hisam Sabouni"
+date: "10/13/2018"
+output: pdf_document
+linestretch: 1.5
+---
+
+\fontfamily{qtm}
+\fontsize{12}{12}
+\selectfont
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,tidy.opts=list(width.cutoff=45),tidy=TRUE,warning = F,message = F,fig.align = 'center')
+```
+
+#Overview
+
+In our last lecture we walked through the cannonical Solow growth model. We concluded that while the model is elegant and provides meaningful insights into the accumulation of capital on GDP growth, the effects of capital accumulation on GDP growth seem to be quite small as indicated by the large Solow residual. The Solow residual, or, total factor productivity, of a country contains all of the residual growth not associated with capital and labor accumulation. The interpretation of the Solow residual is as a measure of technological progress, which the Solow model assumes to be exogenous of the model (taken as given). Endogenous growth theory explicitly models the dynamics of technological progress in an economy by allowing capital and labor to be allocated to a production sector (for consumption) or to a research and development sector (for production of new knowledge). 
+
+Before walking through a simplified model of endogenous growth, lets walk through data on a variety of countries to see how actual economic growth has evolved. A variety of data sources exist for economic growth (some going back hundreds of years), such as FRED, the World Bank, and the Penn World Tables. To keep things simple we'll work with the Penn World Tables data as the data is fairly clean and contains historical measures of economic activity from 1950 - 2014 for 182 countries (Version 9.0: https://www.rug.nl/ggdc/productivity/pwt/). 
+
+A full list of the Penn World Table variables is provided: https://cran.r-project.org/web/packages/pwt9/pwt9.pdf
+
+A formal write up on the data is avaiable as well:
+http://cid.econ.ucdavis.edu/Papers/Feenstra_Inklaar_Timmer_AER.pdf
+
+
+#Proportions of Output
+
+Beginning with our first lecture we described that most production functions are assumed to be Cobb-Douglas equations, following the observations that capital and labor have historically had relatively constant shares of income:
+
+\[Y = AK^{\alpha}L^{1-\alpha}\]
+
+A producer has the following profit maximization problem:
+
+\[Profit = PY - wL - rK\]
+
+\[\frac{\partial Profit}{\partial L}: P *MPL = W\rightarrow MPL = \frac{W}{P} = \text{Real wage}\]
+
+\[\frac{\partial Profit}{\partial K}: P *MPK = R\rightarrow MPK = \frac{R}{P} = \text{Real rental price of captial}\]
+
+The fraction of resources spent on labor is:
+
+\[\text{Labor Share} = (\frac{W}{P})L/Y\]
+
+and the fraction of resources spent on income is:
+
+\[\text{Capital Share} = (\frac{R}{P})K/Y\]
+
+Given that $MPL$ and $MPK$ represent the first order conditions of the production function:
+
+\[(MPL) \frac{\partial Y}{\partial L}: (1-\alpha)A(\frac{K}{L})^{\alpha}\]
+
+\[(MPK) \frac{\partial Y}{\partial L}: \alpha A(\frac{L}{K})^{1-\alpha}\]
+
+Going back to our profit maximization problem:
+
+\[(1-\alpha)A(\frac{K}{L})^{\alpha} = \frac{W}{P} = \text{Real wage}\]
+
+\[\alpha A(\frac{L}{K})^{1-\alpha} = \frac{R}{P} = \text{Real rental price of captial}\]
+
+\[\text{Labor Share} = (\frac{W}{P})L/Y = (1-\alpha)A(\frac{K}{L})^{\alpha}(\frac{L}{AK^{\alpha}L^{1-\alpha}}) = (1 - \alpha)\]
+
+\[\text{Capital Share} = (\frac{R}{P})K/Y = \alpha A(\frac{L}{K})^{1-\alpha} (\frac{K}{AK^{\alpha}L^{1-\alpha}}) = \alpha\]
+
+Fortuneately for us, the Penn World Tables include calculations for labor's share of income over time for 182 countries. If our Cobb-Douglas specification is correct, we should expect labors share of total income to be fairly constant and assume that the remaining income goes to capital.\footnote{Labor's share of income is compliled as from a variety of sources on total income earned by employees/self-employeed individuals divided by the total GDP}. 
+
+```{r}
+#install.packages("pwt9")
+library(pwt9)
+df <- pwt9.0
+df$country <- as.character(df$country)
+df$isocode <- as.character(df$isocode)
+#labsh Share of labour compensation in GDP at current national prices.
+usa_data <- df[df$isocode=='USA',]
+
+plot(usa_data$year,100*usa_data$labsh,ylim = c(0,100),typ='l',ylab='%',xlab='',main='USA')
+lines(usa_data$year,100*(1-usa_data$labsh),col = 2)
+legend('topright',legend = c('Labor Share of Income','Capital Share of Income'),lty = 1,col = 1:2,cex = 0.75)
+mean(usa_data$labsh) #0.628523
+```
+
+
+As we can see in the plot above, labor's share of income is fairly close to around $\frac{2}{3}$ of USA GDP, allowing us to proxy that the remaining $\frac{1}{3}$ is associated with returns to the capital stock. The United States is however just one country; how about the rest of the world? Lets calculate average labor share and average capital share over time across our sample of countries.
+
+```{r}
+country_labor_share_mean <- tapply(df$labsh,df$isocode,function(x)mean(x,na.rm = T))
+country_labor_share_mean
+```
+
+Rather than look at the numbers, lets make a map.
+
+```{r}
+#Run the line below to install on your machine#
+#install.packages('rworldmap')
+library(rworldmap)
+labor_share_mean <- data.frame(country = names(country_labor_share_mean),
+                               labor_share = as.numeric(country_labor_share_mean),
+                               capital_share = 1 - as.numeric(country_labor_share_mean))
+head(labor_share_mean)
+labor_share_mean <- na.omit(labor_share_mean)
+
+country_map <- joinCountryData2Map(labor_share_mean, joinCode="ISO3", nameJoinColumn="country")
+#?joinCountryData2Map
+map_data_labor <- mapCountryData(country_map, nameColumnToPlot="labor_share", mapTitle="Labor Share of Income",colourPalette='heat',addLegend=FALSE)
+#?mapCountryData
+do.call( addMapLegend, c( map_data_labor
+                          , legendLabels="all"
+                          , legendWidth=0.5 ))
+
+map_data_capital <- mapCountryData(country_map, nameColumnToPlot="capital_share", mapTitle="Capital Share of Income",colourPalette='heat',addLegend=FALSE)
+do.call( addMapLegend, c( map_data_capital
+                          , legendLabels="all"
+                          , legendWidth=0.5 ))
+```
+
+
+Rather than looking simply at the average, we can also take a look at how labors share of income has varied across the globe over time. 
+
+
+```{r}
+global_labor_share_mean <- tapply(df$labsh,df$year,function(x)mean(x,na.rm = T))
+#global_labor_share_mean
+global_labor_share_sd <- tapply(df$labsh,df$year,function(x)sd(x,na.rm = T))
+#global_labor_share_sd
+plus_one_sd <- global_labor_share_mean + global_labor_share_sd
+minus_one_sd <- global_labor_share_mean - global_labor_share_sd
+
+plot(unique(df$year),global_labor_share_mean,typ='l',ylim=c(min(minus_one_sd),max(plus_one_sd)),xlab='',ylab='Labor Share of Income',main='World')
+lines(unique(df$year),plus_one_sd,lty = 2)
+lines(unique(df$year),minus_one_sd,lty = 2)
+```
+
+Interestingly, there has been a decline in labor's share of income across the globe.
+
+\textbf{Karabarbounis and Neiman, 2014 http://www.nber.org/papers/w19136}:
+"The stability of the labor share of income is a key foundation in macroeconomic models. We document, however, that the global labor share has significantly declined since the early 1980s, with the decline occurring within the large majority of countries and industries. We show that the decrease in the relative price of investment goods, often attributed to advances in information technology and the computer age, induced firms to shift away from labor and toward capital. The lower price of investment goods explains roughly half of the observed decline in the labor share, even when we allow for other mechanisms influencing factor shares such as increasing profits, capital-augmenting technology growth, and the changing skill composition of the labor force. We highlight the implications of this explanation for welfare and macroeconomic dynamics."
+
+#GDP Growth
+
+Now that we have an idea of how the factors of production have evolved over time, lets take a look at the actual GDP growth.
+
+```{r}
+#rgdpna Real GDP at constant 2011 national prices (in million 2011 USD).
+usa_data$gdp_growth <- c(NA,diff(log(usa_data$rgdpna)))
+plot(usa_data$year,100*usa_data$gdp_growth,typ='l',ylab='%',xlab='',main='USA')
+mean(usa_data$gdp_growth,na.rm = T) #3.1%
+```
+
+As with analyzing the production factors we can see how average GDP growth varies by geography:
+
+```{r}
+country_gdp_mean <- tapply(df$rgdpna,df$isocode,function(x)mean(diff(log(x)),na.rm = T))
+gdp_share_mean <- data.frame(country = names(country_gdp_mean),
+                               gdp_growth = as.numeric(country_gdp_mean))
+gdp_share_mean <- na.omit(gdp_share_mean)
+
+country_map <- joinCountryData2Map(gdp_share_mean, joinCode="ISO3", nameJoinColumn="country")
+#?joinCountryData2Map
+map_data_gdp <- mapCountryData(country_map, nameColumnToPlot="gdp_growth", mapTitle="Avg. GDP Growth",colourPalette='heat',addLegend=FALSE,numCats = 10,catMethod = 'fixedWidth')
+#?mapCountryData
+do.call( addMapLegend, c( map_data_gdp
+                          , legendLabels="all"
+                          , legendWidth=0.5 ))
+```
+
+
+We could also generate a map for log(GDP).
+
+```{r}
+country_gdp_mean <- tapply(df$rgdpna,df$isocode,function(x)mean((log(x)),na.rm = T))
+gdp_share_mean <- data.frame(country = names(country_gdp_mean),
+                               gdp_growth = as.numeric(country_gdp_mean))
+gdp_share_mean <- na.omit(gdp_share_mean)
+
+country_map <- joinCountryData2Map(gdp_share_mean, joinCode="ISO3", nameJoinColumn="country")
+#?joinCountryData2Map
+map_data_gdp <- mapCountryData(country_map, nameColumnToPlot="gdp_growth", mapTitle="Avg. Ln. GDP",colourPalette='heat',addLegend=FALSE,numCats = 10,catMethod = 'fixedWidth')
+#?mapCountryData
+do.call( addMapLegend, c( map_data_gdp
+                          , legendLabels="all"
+                          , legendWidth=0.5 ))
+```
+
+
+#Savings Rates 
+
+Recall that savings is in essence total output less consumption. On average the savings rate in the United States has been approximately 16\% since 1950 and has slowly been on the rise thanks to increases in financial innovation. 
+
+```{r}
+#rgdpna Real GDP at constant 2011 national prices (in million 2011 USD).
+#rconna Real consumption at constant 2011 national prices (in million 2011 USD).
+#rdana Real domestic absorption at constant 2011 national prices (in million 2011 USD).
+df$Savings <- (df$rgdpna - df$rconna)/df$rgdpna
+
+#tapply(df$Savings,df$isocode,function(x)mean(x[1:20],na.rm = T))
+usa_data <- df[df$isocode=='USA',]
+
+plot(usa_data$year,100*usa_data$Savings,typ='l',ylab='%',xlab='',main='USA')
+mean(usa_data$Savings)
+
+#Global average over time
+global_savings_mu <- tapply(df$Savings,df$year,function(x)mean(x,na.rm = T)) 
+
+global_savings_sd <- tapply(df$Savings,df$year,function(x)sd(x,na.rm = T)) 
+minus_one_sd_savings <- global_savings_mu - global_savings_sd
+plus_one_sd_savings <- global_savings_mu + global_savings_sd
+
+plot(unique(df$year),global_savings_mu*100,typ='l',ylab='Savings %',xlab='Time',main='World',ylim=c(100*min(minus_one_sd_savings),100*max(plus_one_sd_savings)))
+lines(unique(df$year),100*minus_one_sd_savings,lty = 2,col = 4)
+lines(unique(df$year),100*plus_one_sd_savings,lty = 2,col = 4)
+```
+
+Recall that savings was one of the core componenets of the Solow-Swan model. Where the higher the savings rate the higher the steady state of capital. A higher steady state of capital implied higher output (as output is a function of capital). Let's compare how savings rates and GDP growth have related to one another across our sample:
+
+```{r}
+global_savings_avg <- tapply(df$Savings,df$isocode,function(x)mean(x,na.rm = T)) 
+
+global_gdp_growth_avg <- tapply(df$rgdpna/df$pop,df$isocode,function(x)mean(diff(log(x)),na.rm = T))
+
+
+plot(global_savings_avg*100,global_gdp_growth_avg*100,xlab='Avg. Savings %',ylab='Avg. GDP Growth per Capita',main = '1950-2014')
+
+text(global_savings_avg*100,global_gdp_growth_avg*100,names(global_gdp_growth_avg),cex = 0.4,pos = 4)
+
+points(100*global_savings_avg[names(global_savings_avg) == 'USA'],
+       100*global_gdp_growth_avg[names(global_savings_avg) == 'USA'],col =4,pch = 19)
+
+
+#Limit to only those with positive savings..
+#Store the names of countries with positive savings
+positive_savings_countries <- names(global_savings_avg)[global_savings_avg > 0]
+
+#Keep only those gdp estimates with postive savings
+global_gdp_growth_avg <- global_gdp_growth_avg[global_savings_avg > 0]
+
+#Keep only those savings estimates with postive savings
+global_savings_avg <- global_savings_avg[global_savings_avg >0]
+
+
+plot(global_savings_avg*100,global_gdp_growth_avg*100,xlab='Avg. Savings %',ylab='Avg. GDP Growth per Capita',main = '1950-2014',xlim=c(0,100))
+text(global_savings_avg*100,global_gdp_growth_avg*100,names(global_gdp_growth_avg),cex = 0.4,pos = 4)
+points(100*global_savings_avg[names(global_savings_avg) == 'USA'],
+       100*global_gdp_growth_avg[names(global_savings_avg) == 'USA'],col =4,pch = 19)
+
+mdl <- lm(global_gdp_growth_avg~global_savings_avg)
+summary(mdl)
+
+#What if we control for large/small economies prior to 1980?
+#Summarize gdp for all countries using data up to 1980
+summary(df$rgdpna[df$year <= 1980])
+
+large_economies <-  unique(df[which(df$rgdpna >= 103000 & df$year <= 1980),'isocode'])
+small_economies <-  unique(df[which(df$rgdpna <= 4403 & df$year <= 1980),'isocode'])
+
+large_dummy <- ifelse(names(global_gdp_growth_avg) %in% large_economies,1,0)
+small_dummy <- ifelse(names(global_gdp_growth_avg) %in% small_economies,1,0)
+
+mdl <- lm(global_gdp_growth_avg~global_savings_avg + large_dummy + small_dummy)
+summary(mdl)
+
+mdl <- lm(global_gdp_growth_avg~ large_dummy*global_savings_avg + small_dummy*global_savings_avg )
+summary(mdl)
+plot(mdl)
+```
+
+As our analysis of the Solow residual suggested, we are only explaining a small part of GDP growth through the Solow model. The above simple regressions on average GDP growth on average savings rates confirm this with the quite low adjusted-$R^{2}$. 
+
+#Population Growth
+
+Recall that in the Solow-Swan model, increases in population growth were negatively related to output per unit of effective labor. We can check this prediction by plotting average population growth against average output growth on a per capita basis to see if any patterns emerge.
+
+```{r}
+global_pop_growth_avg <- tapply(df$pop,df$isocode,function(x)mean(diff(log(x)),na.rm = T))
+global_pop_growth_avg <- global_pop_growth_avg[names(global_pop_growth_avg) %in% positive_savings_countries] #Keep only countries with positive savings rates
+
+
+plot(global_pop_growth_avg*100,global_gdp_growth_avg*100,xlab='Avg. Population Growth %',ylab='Avg. GDP Growth per Capita',main = '1950-2014')
+text(global_pop_growth_avg*100,global_gdp_growth_avg*100,names(global_gdp_growth_avg),cex = 0.4,pos = 4)
+points(100*global_pop_growth_avg[names(global_pop_growth_avg) == 'USA'],
+       100*global_gdp_growth_avg[names(global_pop_growth_avg) == 'USA'],col =4,pch = 19)
+
+mdl_pop <- lm(global_gdp_growth_avg ~ global_pop_growth_avg)
+summary(mdl_pop)
+
+
+mdl_pop_savings <- lm(global_gdp_growth_avg ~ global_pop_growth_avg + global_savings_avg)
+summary(mdl_pop_savings)
+```
+
+
+There are plenty of more variables in the Penn World tables that I urge you to explore and create your own visualizations within (For instance, how about checking the relationship with depreciation on GDP growth?). Now let's move on to endogenous growth theory.
+
+#Endogenous Growth Theory
+
+As mentioned before, endogenous growth theory explicitly models the dynamics of technological progress in an economy by allowing capital and labor to be allocated to a production sector (for consumption) or to a research and development sector (for production of new knowledge). 
+
+As before, we will assume a Cobb-Douglas production function with technology augmenting labor:
+
+\[Y_{t} = [(1-\alpha_{K})K_{t}]^{\alpha}[A_{t}(1-\alpha_{L})L_{t}]^{1-\alpha}\]
+
+However we now have fractions of capital $\alpha_{K}$ and fractions of labor $\alpha_{L}$ that are being allocated towards research and development, implying $1-\alpha_{K}$ of the capital stock and $1-\alpha_{L}$ of the labor stock being used for production of goods in our economy for consumption (output). This production function still exhibits constant returns to scale in capital and labor with a given technology $\rightarrow$ doubling the inputs doubles the amount that can be produced. 
+
+Previously we assumed the dynamics of $A_{t}$ were exogenous to the model; following a growth rate $g$. Now we will explicity model the dynamics of $A_{t}$ as
+
+\[\dot{A}_{t} = B[\alpha_{K}K_{t}]^{\beta}[\alpha_{L}L_{t}]^{\gamma}A_{t}^{\theta},\ \text{where}\ B>0;\ \beta\ge 0,\ \gamma\ge0\]
+
+$B$ acts as a shift parameter (like $g$). Notice that we are not imposing constant returns to scale to capital and labor. In the case of knowledge production, exactly replicating what the existing inputs were doing would cause the same set of discoveries to be made twice, hence we could actually have diminishing returns to research and development. $\theta$ governs the effects of the existing stock of knowledge on the success of R\&D. Where past discoveries may provide ideas and tools that make future discoveries easier ($\theta > 0$), or, past discoveries may have been the easy ones, making future discoveries more difficult ($\theta < 0$).
+
+For simplicity, we will impose the following dynamics on capital and labor:
+
+\[\dot{K}_{t} = sY_{t}\]
+
+\[\dot{L}_{t} = nY_{t},\ n \ge 0\]
+
+Notice in this version of endogenous growth that when $\beta = \gamma=\alpha_{K} = \alpha_{L} =0$ and $\theta = 1$ we are back to the Solow model (where $B = g$ and $\delta = 0$).
+
+We start off by making further simplifications by removing capital from the model.
+
+##Endogenous Growth without Capital
+
+A model without capital is achieved by setting $\alpha = \beta = 0$ in our production function and in our model for the dynamics of $A_{t}$. Therefore we have that
+
+\[Y_{t} = A_{t}(1-\alpha_{L})L_{t}\]
+
+\[\dot{A}_{t} = B[\alpha_{L}L_{t}]^{\gamma}A_{t}^{\theta}\]
+
+\[\dot{L}_{t} = nY_{t},\ n \ge 0\]
+
+Where we can get output on a per unit of labor basis by dividing by $L_{t}$:
+
+\[ \frac{Y_{t}}{L_{t}}= y_{t} = A_{t}(1-\alpha_{L})\]
+
+Which immediately implies that the growth rate of output per unit of labor relies entirely on the growth rate of $A_{t}$. Recall that the growth rate of a variable is its change over time divided by its previous value:
+
+\[g_{A,t} = \frac{\dot{A}_{t}}{A_{t}} = B[\alpha_{L}L_{t}]^{\gamma}A_{t}^{\theta - 1}\]
+
+This tells us that the growth rate of technology initially is really a function of our model inputs. Of more interest is how the growth rate of the growth rate of A varies over time (not a typo). Taking logarithms and differentiating with respect to time:
+
+\[\frac{\partial Ln(g_{A,t})}{\partial t} =\frac{\dot{g}_{A,t}}{g_{A,t}}= \gamma \frac{\dot{L}_{t}}{L_{t}} + (\theta - 1)\frac{\dot{A}_{t}}{A_{t}}\]
+
+\[\frac{\partial Ln(g_{A,t})}{\partial t}=\frac{\dot{g}_{A,t}}{g_{A,t}} = \gamma n + (\theta - 1)g_{A,t}\]
+
+\[\dot{g}_{A,t} = (\gamma n + (\theta - 1)g_{A,t})g_{A,t}\]
+
+Again, the initial values of $L$ and $A$, along with the paramters of the model determine the initial values of $g_{A,t}$, now we can describe how the growth rate changes over time through $\dot{g}_{A,t}$. Of particular interest is the relationship between $\theta$ and $1$.
+
+
+###Case 1: $\theta < 1$
+
+When $\theta < 1$ we have the case where the contribution of additional knowledge to the production of new knowledge is not strong enough to be self-sustaining. We can solve for the growth rate at which point the growth rate stops changing ($\dot{g}_{A,t} = 0$):
+
+\[0= (\gamma n + (\theta - 1)g_{A,t})g_{A,t}\]
+
+\[ g_{A,t}^{*} = \frac{-\gamma n}{(\theta - 1)}\]
+
+Exactly at $g_{A,t}^{*}$ the growth rate is no longer changing, at which point we are on a balanced growth path.
+
+
+```{r}
+A_t <- 1 #Initial technology level
+L_t <- 1 #Initial population level
+gamma <- 0.2 #Sensitivity to labor in R&D
+alpha_l <- 0.5 #Fraction of labor working in R&D
+n <- 0.02 #Population Growth Rate
+theta <- 0.99 #Sensitivity to previous knowledge base
+B <- 0.02 #Base R&D rate
+steady_ga <- (gamma*n)/(1-theta) #Steady State
+g_at <- seq(0,0.45,by = 0.001) #Vary growth rates
+g_at_chng <- gamma*n*g_at + (theta - 1)*(g_at^2) #See how growth rate changes
+plot(g_at,g_at_chng,typ = 'l',ylab='Change in Growth Rate of A',xlab='Growth Rate of A',main=expression(paste(theta,' < 1',sep='')))
+abline( h = 0)
+```
+
+This tells us that when we are below the steady state growth rate the growth rate will accelerate towards the steady state and once we exceed the steady state growth rate the growth rate will reverse back towards the steady state. Lets expand the code above to keep going until $g_{A,t}$ is no longer changing and see what happens when the growth rate is above or below its steady state:
+
+```{r}
+A_t <- 1 #Initial technology level
+L_t <- 1 #Initial population level
+gamma <- 0.2 #Sensitivity to labor in R&D
+alpha_l <- 0.5 #Fraction of labor working in R&D
+n <- 0.02 #Population Growth Rate
+theta <- 0.99 #Sensitivity to previous knowledge base
+B <- 0.02 #Base R&D rate
+steady_ga <- (gamma*n)/(1-theta) #Steady State
+g_at <- c(0.3) #Initialize growth rate below steady state value
+g_at_chng <- gamma*n*g_at[length(g_at)] + (theta - 1)*(g_at[length(g_at)]^2) #Initialize change
+itr <- 1
+while(abs(g_at_chng - steady_ga) > 1e-4 & itr < 1000){
+  g_at <- c(g_at,g_at[length(g_at)] + g_at_chng)
+  g_at_chng <- gamma*n*g_at[length(g_at)] + (theta - 1)*(g_at[length(g_at)]^2) #Initialize change
+  itr <- itr + 1
+}
+plot(g_at,typ = 'l',main=expression(paste(theta,' < 1; Starting Below Steady State',sep=' ')))
+
+g_at <- c(0.5) #Initialize growth rate above steady state value
+g_at_chng <- gamma*n*g_at[length(g_at)] + (theta - 1)*(g_at[length(g_at)]^2) #Initialize change
+itr <- 1
+while(abs(g_at_chng - steady_ga) > 1e-4 & itr < 1000){
+  g_at <- c(g_at,g_at[length(g_at)] + g_at_chng)
+  g_at_chng <- gamma*n*g_at[length(g_at)] + (theta - 1)*(g_at[length(g_at)]^2) #Initialize change
+  itr <- itr + 1
+}
+plot(g_at,typ = 'l',main=expression(paste(theta,' < 1; Starting Above Steady State',sep=' ')))
+```
+
+
+As expected, the model converges back to its steady state value. Interestingly, this model implies that the long-run growth rate of output per worker, $g_{A,t}$, is increasing in population growth, which constrasts the Solow model and empirical data. Another interesting thing to note is that our steady state growth rate, $g_{A,t}^{*}$, does not rely on the fraction of the labor force working in the R\&D sector, $\alpha_{L}$! However, $\alpha_{L}$ does impact the level of A through $g_{A,t} = \frac{\dot{A}_{t}}{A_{t}} = B[\alpha_{L}L_{t}]^{\gamma}A_{t}^{\theta - 1}$.
+
+###Case 2: $\theta >1$
+
+This case corresponds to the case where the production of new knowledge rises more than proportionally with the existing stock. From our derivation of how the growth rate evolves:
+
+\[\dot{g}_{A,t} = (\gamma n + (\theta - 1)g_{A,t})g_{A,t}\]
+
+The second compnent implies that $\dot{g}_{A,t}$ is positive for all possible values of $g_{A,t}$. In this case the economy exhibits ever-increasing growth rather than convergence to a balanced growth path. 
+
+```{r}
+A_t <- 1 #Initial technology level
+L_t <- 1 #Initial population level
+gamma <- 0.2 #Sensitivity to labor in R&D
+alpha_l <- 0.5 #Fraction of labor working in R&D
+n <- 0.02 #Population Growth Rate
+theta <- 1.01 #Sensitivity to previous knowledge base
+B <- 0.02 #Base R&D rate
+g_at <- c(0.3) #Initialize growth rate below steady state value
+g_at_chng <- gamma*n*g_at[length(g_at)] + (theta - 1)*(g_at[length(g_at)]^2) #Initialize change
+itr <- 1
+while(itr < 20){
+  g_at <- c(g_at,g_at[length(g_at)] + g_at_chng)
+  g_at_chng <- gamma*n*g_at[length(g_at)] + (theta - 1)*(g_at[length(g_at)]^2) #Initialize change
+  itr <- itr + 1
+}
+plot(g_at,typ = 'l',main=expression(paste(theta,' > 1',sep=' ')))
+```
+
+
+###Case 3: $\theta =1$
+
+When $\theta = 1$ existing knowledge is just productive enough in generating new knowledge that the production of new knowledge is proportional to the stock. Our growth becomes:
+
+\[g_{A,t} = \frac{\dot{A}_{t}}{A_{t}} = B[\alpha_{L}L_{t}]^{\gamma}\]
+
+And evolves according to:
+
+\[\dot{g}_{A,t} = \gamma n g_{A,t}\]
+
+In this particular case, if population growth is positive, $g_{A,t}$ is perpetually growing over time (similar to the case of $\theta > 1$). If population growth is zero, we are immediately at the steady state growth rate of $B[\alpha_{L}L_{t}]^{\gamma}$.
+
+```{r}
+A_t <- 1 #Initial technology level
+L_t <- 1 #Initial population level
+gamma <- 0.2 #Sensitivity to labor in R&D
+alpha_l <- 0.5 #Fraction of labor working in R&D
+n <- 0.0 #Population Growth Rate
+theta <- 1 #Sensitivity to previous knowledge base
+B <- 0.02 #Base R&D rate
+g_at <- c(0.3) #Initialize growth rate below steady state value
+g_at_chng <- gamma*n*g_at[length(g_at)] + (theta - 1)*(g_at[length(g_at)]^2) #Initialize change
+itr <- 1
+while(itr < 20){
+  g_at <- c(g_at,g_at[length(g_at)] + g_at_chng)
+  g_at_chng <- gamma*n*g_at[length(g_at)] + (theta - 1)*(g_at[length(g_at)]^2) #Initialize change
+  itr <- itr + 1
+}
+plot(g_at,typ = 'l',main=expression(paste(theta,' = 1; n = 0',sep=' ')))
+```
+
+
+
+```{r}
+A_t <- 1 #Initial technology level
+L_t <- 1 #Initial population level
+gamma <- 0.2 #Sensitivity to labor in R&D
+alpha_l <- 0.5 #Fraction of labor working in R&D
+n <- 0.02 #Population Growth Rate
+theta <- 1 #Sensitivity to previous knowledge base
+B <- 0.02 #Base R&D rate
+g_at <- c(0.3) #Initialize growth rate below steady state value
+g_at_chng <- gamma*n*g_at[length(g_at)] + (theta - 1)*(g_at[length(g_at)]^2) #Initialize change
+itr <- 1
+while(itr < 20){
+  g_at <- c(g_at,g_at[length(g_at)] + g_at_chng)
+  g_at_chng <- gamma*n*g_at[length(g_at)] + (theta - 1)*(g_at[length(g_at)]^2) #Initialize change
+  itr <- itr + 1
+}
+plot(g_at,typ = 'l',main=expression(paste(theta,' = 1; n = 2%',sep=' ')))
+```
+
+##Endogenous Growth with Capital
+
+Now lets go back and add back in capital to our model:
+
+\[Y_{t} = [(1-\alpha_{K})K_{t}]^{\alpha}[A_{t}(1-\alpha_{L})L_{t}]^{1-\alpha}\]
+
+\[\dot{A}_{t} = B[\alpha_{K}K_{t}]^{\beta}[\alpha_{L}L_{t}]^{\gamma}A_{t}^{\theta},\ \text{where}\ B>0;\ \beta\ge 0,\ \gamma\ge0\]
+
+\[\dot{K}_{t} = sY_{t}\]
+
+\[\dot{L}_{t} = nY_{t},\ n \ge 0\]
+
+Lets focus for a moment on the dynamics of capital accumulation $\dot{K}_{t}$:
+
+\[\dot{K}_{t} = sY_{t} = s(1-\alpha_{K})^\alpha (1-\alpha_{L})^{1-\alpha}K_{t}^{\alpha}(A_{t}L_{t})^{1-\alpha}\]
+
+Let $c = s(1-\alpha_{K})^\alpha (1-\alpha_{L})^{1-\alpha}$
+
+\[g_{K,t} = \frac{\dot{K}_{t}}{K_{t}} = c(\frac{A_{t}L_{t}}{K_{t}})^{1-\alpha}\]
+
+Our growth rate of capital is initialized by the parameters of the model. We can now look at how the growth rate evolves over time by taking logs and differentiating with respect to time:
+
+\[Ln(g_{K,t}) = Ln(c) + (1-\alpha)Ln(A_{t}) + (1-\alpha)Ln(L_{t}) - (1-\alpha)Ln(K_{t})\]
+
+\[\frac{\partial t Ln(g_{K,t})}{\partial t} = \frac{\dot{g}_{K,t}}{g_{K,t}}=  (1-\alpha)(g_{A,t} + g_{L,t} - g_{K,t})\]
+
+Given that $g_{K,t} > 0$ the model implies that the growth rate of capital is increasing when $g_{A,t} + n - g_{K,t} > 0$, decreasing when $g_{A,t} + n - g_{K,t}< 0$, and constant when $ g_{A,t} + n - g_{K,t}= 0$. When $g_{A,t} = 0$, we have that the growth rate of capital is growing at the rate of $n$. The equation implies that the growth rate in capital increases 1 for 1 with the growth rate of knowledge. When $\dot{g}_{K,t} = 0$, that is the growth rate is no longer changing we have:
+
+\[ g_{K,t} = g_{A,t} + n \]
+
+Now lets take a look at how knowledge is evolving over time:
+  
+\[\dot{A}_{t} = B[\alpha_{K}K_{t}]^{\beta}[\alpha_{L}L_{t}]^{\gamma}A_{t}^{\theta}\]
+
+\[g_{A,t}= \frac{\dot{A}_{t}}{A_{t}} = B[\alpha_{K}K_{t}]^{\beta}[\alpha_{L}L_{t}]^{\gamma}A_{t}^{\theta - 1}\]
+
+Our growth rate of knowledge is initialized by the parameters of the model. Let $c_{A} = B\alpha_{K}^{\beta}\alpha_{L}^{\gamma}$ We can now look at how the growth rate evolves over time by taking logs and differentiating with respect to time:
+  
+\[Ln(g_{A,t}) =Ln(c_{A}) + \beta Ln(K_{t}) +\gamma Ln(L_{t})+ (\theta - 1)Ln(A_{t})\]
+
+\[\frac{\partial Ln(g_{A,t})}{\partial t} = \frac{\dot{g}_{A,t}}{g_{A,t}}=\beta g_{K,t} +\gamma n+ (\theta - 1)g_{A,t}\]
+
+The model implies that the growth rate of knowledge is increasing when $\beta g_{K,t} +\gamma n+ (\theta - 1)g_{A,t} > 0$, decreasing when $\beta g_{K,t} +\gamma n+ (\theta - 1)g_{A,t}< 0$, and constant when $\beta g_{K,t} +\gamma n+ (\theta - 1)g_{A,t}= 0$. When $\dot{g}_{A,t} = 0$, that is the growth rate is no longer changing we have:
+  
+\[ g_{K,t} = \frac{-\gamma n}{\beta} + \frac{(1-\theta)}{\beta}g_{A,t}\]
+
+Going back to our production function, whether there are net increasing, decreasing, or constant returns to scale to the produced factors depends on their returns to scale in the production function for knowledge. The degree of returns to scale to $K$ and $A$ by a factor of $X$, increases $A$ by a factor of $X^{\beta + \theta}$. Therefore, in our model with capital and knowledge we need to analyze the relationship between $\beta + \theta$ and $1$. 
+
+### Case: $\beta + \theta < 1$
+
+When $\beta + \theta < 1$, we have that $\frac{(1-\theta)}{\beta} > 1$ (Recall that $\beta > 0$). The point at which the growth rates of capital and knowledge are no longer changing will be our equilbrium growth rates for both variables:
+  
+  \[ g_{K,t}^{*} = g_{A,t}^{*} + n \]
+
+\[ \beta g_{K,t}^{*} = -\gamma n + (1-\theta)g_{A,t}^{*}\]
+
+\[ \beta (g_{A,t}^{*} + n )= -\gamma n + (1-\theta)g_{A,t}^{*}\]
+
+\[ (\beta + \gamma) n = (1-\theta - \beta)g_{A,t}^{*}\]
+
+\[ g_{A,t}^{*} =  \frac{(\beta + \gamma) n}{1-(\theta + \beta)}\]
+
+\[ g_{K,t}^{*} =  \frac{(\beta + \gamma) n}{1-(\theta + \beta)} + n\]
+
+This implies that output is growing at rate $g_{K,t}^{*}$, when $A$ is growing at $g_{A,t}^{*}$ and $K$ is growing at $g_{K,t}^{*}$. Output per worker is growing at $g_{A,t}^{*}$. This case is similar to the case when $\theta < 1$ in the model without capital. The long-run growth rate of the economy is endogenous, and the long-run growth rate is an increasing function of population growth and is zero if population growth is zero. The fractions of the labor force and the capital stock engaged in R\&D, do not affect long-run growth. The endogeneity of growth is emerging really from population growth and the parameters of knowledge production that govern the dynamics of $\dot{A}_{t}$. 
+
+
+
+```{r}
+K_t <- 1 #Initial capital level
+A_t <- 1 #Initial technology level
+L_t <- 1 #Initial population level
+gamma <- 0.2 #Sensitivity to labor in R&D
+alpha_l <- 0.5 #Fraction of labor deployed in R&D
+alpha_k <- 0.5 #Fraction of capital deployed in R&D
+n <- 0.02 #Population Growth Rate
+theta <- 0.9 #Sensitivity to previous knowledge base
+beta <- 0.05 #Sensitivity to capital base
+alpha <- 1/3 #Cobb-Douglas Production Function
+B <- 0.02 #Base R&D rate
+g_at_steady <- ((gamma + beta)*n)/(1-(beta + theta))
+g_kt_steady <- g_at_steady + n
+g_kt <- c(0.01)
+g_at <- c(0.01) 
+
+g_kt_chng <- (1-alpha)*(g_at[length(g_at)] + n - g_kt[length(g_kt)])*g_kt[length(g_kt)]
+g_at_chng <- gamma*n*g_at[length(g_at)] + (theta - 1)*(g_at[length(g_at)]^2) +beta*g_kt[length(g_kt)]*g_at[length(g_at)]#Initialize change
+
+itr <- 1
+while(itr < 5000){
+  g_kt <- c(g_kt,g_kt[length(g_kt)] + g_kt_chng)
+  g_at <- c(g_at,g_at[length(g_at)] + g_at_chng) 
+  
+  g_kt_chng <- (1-alpha)*(g_at[length(g_at)] + n - g_kt[length(g_kt)])*g_kt[length(g_kt)]
+  g_at_chng <- gamma*n*g_at[length(g_at)] + (theta - 1)*(g_at[length(g_at)]^2) +beta*g_kt[length(g_kt)]*g_at[length(g_at)]#Initialize change
+  itr <- itr + 1
+}
+plot(g_kt,typ='l',main=expression(paste(beta, '+',theta,'< 1',sep='')))
+plot(g_at,typ='l',main=expression(paste(beta, '+',theta,'< 1',sep='')))
+```
+
+
+In the case where $\beta + \theta = 1$ and $n = 0$, we have that our model collapses down to simply $g_{A,t} = g_{K,t}$, which implies that the economy is immediately on a balanced growth path that is paramertized by the assumptions we make about population growth and the parameters of knowledge production. 
+
+```{r}
+K_t <- 1 #Initial capital level
+A_t <- 1 #Initial technology level
+L_t <- 1 #Initial population level
+gamma <- 0.2 #Sensitivity to labor in R&D
+alpha_l <- 0.5 #Fraction of labor deployed in R&D
+alpha_k <- 0.5 #Fraction of capital deployed in R&D
+n <- 0.0 #Population Growth Rate
+theta <- 0.9 #Sensitivity to previous knowledge base
+beta <- 0.1 #Sensitivity to capital base
+alpha <- 1/3 #Cobb-Douglas Production Function
+B <- 0.02 #Base R&D rate
+g_at_steady <- ((gamma + beta)*n)/(1-(beta + theta))
+g_kt_steady <- g_at_steady + n
+g_kt <- c(0.01)
+g_at <- c(0.01) 
+
+g_kt_chng <- (1-alpha)*(g_at[length(g_at)] + n - g_kt[length(g_kt)])*g_kt[length(g_kt)]
+g_at_chng <- gamma*n*g_at[length(g_at)] + (theta - 1)*(g_at[length(g_at)]^2) +beta*g_kt[length(g_kt)]*g_at[length(g_at)]#Initialize change
+
+itr <- 1
+while(itr < 5000){
+  g_kt <- c(g_kt,g_kt[length(g_kt)] + g_kt_chng)
+  g_at <- c(g_at,g_at[length(g_at)] + g_at_chng) 
+  
+  g_kt_chng <- (1-alpha)*(g_at[length(g_at)] + n - g_kt[length(g_kt)])*g_kt[length(g_kt)]
+  g_at_chng <- gamma*n*g_at[length(g_at)] + (theta - 1)*(g_at[length(g_at)]^2) +beta*g_kt[length(g_kt)]*g_at[length(g_at)]#Initialize change
+  itr <- itr + 1
+}
+plot(g_kt,typ='l',main=expression(paste(beta, '+',theta,'= 1; n = 0',sep='')))
+plot(g_at,typ='l',main=expression(paste(beta, '+',theta,'= 1; n = 0',sep='')))
+```
+
+
+
+
+
+
+
+
+
+
+
