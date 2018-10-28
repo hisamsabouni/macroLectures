@@ -1,13 +1,3 @@
-<!-- Global site tag (gtag.js) - Google Analytics -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=UA-116937010-3"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'UA-116937010-3');
-</script>
-
 # Macroeconomics at Claremont Graduate University
 
 The aim of this class is to equip you with a set of tools to analyze macroeconomic movements in the long and short-run. 
