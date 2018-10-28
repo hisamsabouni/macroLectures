@@ -1,5 +1,3 @@
-
-
 # Macroeconomics at Claremont Graduate University
 
 The aim of this class is to equip you with a set of tools to analyze macroeconomic movements in the long and short-run. 
@@ -20,3 +18,5 @@ I am an adjunct professor at Claremont Graduate Universtiy in the department of 
 [Lecture 3: Unemployment models](https://github.com/hisamsabouni/macroLectures/blob/master/lecture_3.pdf)
 
 [Lecture 4: Long-Run Economic Growth: Solow-Swan Model](https://github.com/hisamsabouni/macroLectures/blob/master/lecture_4.pdf)
+
+[Lecture 5: Analyzing Economic Growth and Endogenous Growth Theory](https://github.com/hisamsabouni/macroLectures/blob/master/lecture_5.pdf)
