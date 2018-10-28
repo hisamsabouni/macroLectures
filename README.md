@@ -1,6 +1,12 @@
-<head>
-<meta name="google-site-verification" content="6gpjpwy7Vo5jZ4XT5JfZFaFqr-G9ijl_4FEmmgAiVcI" />
-</head>
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-116937010-3"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-116937010-3');
+</script>
 
 # Macroeconomics at Claremont Graduate University
 
