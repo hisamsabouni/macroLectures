@@ -1,4 +1,6 @@
+<head>
 <meta name="google-site-verification" content="6gpjpwy7Vo5jZ4XT5JfZFaFqr-G9ijl_4FEmmgAiVcI" />
+</head>
 
 # Macroeconomics at Claremont Graduate University
 
