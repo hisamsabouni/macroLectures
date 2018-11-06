@@ -1,0 +1,286 @@
+---
+title: "Lecture 6: The Open Economy"
+author: "Hisam Sabouni"
+date: "11/5/2018"
+output: pdf_document
+linestretch: 1.5
+---
+
+\fontfamily{qtm}
+\fontsize{12}{12}
+\selectfont
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,tidy.opts=list(width.cutoff=45),tidy=TRUE,warning = F,message = F,fig.align = 'center')
+```
+
+#Overview
+
+Recall our basic national income account identity:
+
+\[Y = C + I + G + NX\]
+
+Up to this point $NX\ \text{(Net exports)} = 0$, as we have simplified all of our analysis by looking at closed economies. Note that net exports is the difference between all goods and services consumed by foreigners (exports) and all goods and services consumed by natives from abroad (imports). Re-arranging a few terms:
+
+\[Y - (C + I + G) = NX\]
+
+In an open economy, domestic spending need not equal the output of goods and services. If output exceeds domestic spending, the country exports the difference. If output is below domestic spending, the country imports the difference. 
+
+A few other interesting insights can be found by re-arranging:
+
+\[Y - C - G = I + NX\]
+
+Here $Y - C - G$ represents national savings. 
+
+\[S = I + NX\ \text{or}\ S-I=NX\]
+
+This tells us that a countries net exports must always equal the difference between its savings and its investment. Net exports is commonly referred to as the trade balance and S-I can be thought of as net foreign investment, or, net capital outflow. Net capital outflow is the amount that domestic residents are lending abroad minus the amount that foreigners are lending to domestic residents. The national income accounts identity shows that the international flow of funds to finance capital accumulation and the international flow of goods and services are two sides of the same coin. 
+
+```{r}
+#Gross Domestic Product (GDP) Y =
+  #Personal Consumption Expenditures (PCEC) C + 
+  #Gross Private Domestic Investment (GPDI) I +
+  #Government Consumption Expenditures and Gross Investment (GCE) G +
+  #Net Exports of Goods and Services (NETEXP) NX 
+library(quantmod)
+getSymbols(c('GDP','NETEXP','PCEC','GPDI','GCE'),src = 'FRED')
+national_income_accounts <- merge(GDP,NETEXP,PCEC,GPDI,GCE)
+colnames(national_income_accounts) <- c('gdp','net_exports','consumption','investment','government')
+head(national_income_accounts)
+
+national_income_accounts$national_savings <- with(national_income_accounts,gdp - consumption-government)
+
+plot(100*national_income_accounts$net_exports/national_income_accounts$gdp,typ='l',main='U.S. Trade Balance',xlab='',ylab='% of GDP')
+abline(h = 0)
+plot(100*national_income_accounts$national_savings/national_income_accounts$gdp,typ='l',main='U.S. Savings and Investment',xlab='',ylab='% of GDP')
+lines(100*national_income_accounts$investment/national_income_accounts$gdp,col=4)
+legend('bottomleft',legend = c('Savings','Investment'),lty = 1,col = c(1,4),cex = 0.75)
+```
+
+
+We can verify that the flow of funds is in fact equal to the flow of goods and services:
+
+```{r}
+1 == T
+#Check if S - I = NX. Round the data to avoid simple rounding errors
+sum(round(national_income_accounts$national_savings - national_income_accounts$investment) == round(national_income_accounts$net_exports),na.rm = T)/nrow(national_income_accounts)
+#1 indicates 100% of entries are equal to one another.
+```
+
+#Small Open Economy
+
+In our first lecture we kept savings at some exogenously given fixed level and had the amount of investment in our economy governed by the prevailing interest rate ($I(r)$), where higher interest rates corresponded with lower investment and lower interest rates corresponded with higher investment. We used this framework to analyze the impact of fiscal policy:
+
+```{r}
+r <- seq(0,.15,by=0.001)
+investment <-  1000-2000*sqrt(r)#Made it up..
+plot(investment,r,typ='l',xlab='Investment/Savings',ylab='r')
+s1 <- 600
+s2 <- 500
+abline(v = s1)
+abline(v = s2,col = 2)
+```
+
+Through increased fiscal policy national savings is reduced as $G\uparrow$. This shifts the supply of funds to the left, leading to higher interest rates and lower investment. In our small closed economy increased government spending led to a 'crowding out' of investment. 
+
+In an open economy things are a bit different. More percisely, if we allow for perfect capital mobility investors will choose to invest their money wherever they may get the highest return. This implies that in a small open economy the amount of investment that will take place will rely on the prevailing world interest rate (Here we make the assumption that a small open economy cannot influence the world interest rate). In other words $I(r^{*})$, where $r^{*}$ is the prevailing world interest rate. Let's take a look at what happens to fiscal policy (An increase in government spending or a tax cut) in this enviornment:
+
+```{r}
+r <- seq(0,.15,by=0.001)
+investment <-  1000-2000*sqrt(r)#Made it up..
+which.min(abs(investment-600)) #Index of the interest rate that starts us off in equilbrium
+plot(investment,r,typ='l',xlab='Investment/Savings',ylab='r')
+points(investment[41],r[41],pch=19,col=4)
+abline(h = r[41],lty = 2)
+s1 <- 600
+s2 <- 500
+abline(v = s1,col=4)
+abline(v = s2,col = 2)
+points(500,r[41],pch=19,col=2)#Interest rate fixed at world level
+```
+
+In the case of a small open economy that starts off with balanced trade, the fiscal expansion reduces national savings as before, but the interest rate does not freely adjust. Given that the decisions of the small open economy are not sufficiently large enough to impact the world interest rate the reduction in the supply of available funds by the reduction in savings is made up for by importing capital.
+
+In general policies that increase investment or decrease savings tend to cause a trade deficit, and policies that decrease investment or increase savings tend to cause a trade surplus. Are trade deficits a bad thing?
+
+Lets take a look at trade balances around the globe:
+
+```{r}
+#install.packages('pwt9')
+library(pwt9)
+library(rworldmap)
+
+
+plot_net_exports <- function(iso){
+  country_data <- pwt9.0[pwt9.0$isocode==iso,]
+  plot(country_data$year,
+     (country_data$csh_x*country_data$pl_x + country_data$csh_m*country_data$pl_m)*100,
+     ylab = '% of GDP',xlab='',typ='l',main=paste(iso,' Trade Balance',sep=''))
+}
+
+plot_net_exports('USA')
+plot_net_exports('CHN')
+plot_net_exports('DEU')
+plot_net_exports('GBR')
+
+avg_trade_balance_last_decade <- tapply(pwt9.0$csh_x*pwt9.0$pl_x + pwt9.0$csh_m*pwt9.0$pl_m,
+       pwt9.0$isocode,function(x)mean(x[(max(1,length(x) - 10,na.rm = T)):length(x)],na.rm = T))
+
+
+avg_trade_balance_last_decade <- na.omit(avg_trade_balance_last_decade)
+
+
+avg_trade_balance_last_decade <- avg_trade_balance_last_decade[-0.5 < avg_trade_balance_last_decade & avg_trade_balance_last_decade < 0.5]
+
+avg_trade_balance_last_decade <- data.frame(country = names(avg_trade_balance_last_decade),
+                               trade_balance = as.numeric(avg_trade_balance_last_decade))
+
+
+country_map <- joinCountryData2Map(avg_trade_balance_last_decade, joinCode="ISO3", nameJoinColumn="country")
+#?joinCountryData2Map
+map_data_gdp <- mapCountryData(country_map, nameColumnToPlot="trade_balance", mapTitle="Avg. Trade Balance as % of GDP",colourPalette='heat',addLegend=FALSE,numCats = 10)
+#?mapCountryData
+do.call( addMapLegend, c( map_data_gdp
+                          , legendLabels="all"
+                          , legendWidth=0.5 ))
+which.max(avg_trade_balance_last_decade$trade_balance)
+avg_trade_balance_last_decade[173,] #Virgin Islands
+which.min(avg_trade_balance_last_decade$trade_balance)
+avg_trade_balance_last_decade[116,] #Montserrat
+```
+
+What is the correlation between average gdp growth and average trade balance using the penn world tables?
+
+```{r}
+
+plot_net_exports_with_GDP <- function(iso){
+  country_data <- pwt9.0[pwt9.0$isocode==iso,]
+  country_data$GDP_Growth <- c(NA,diff(log(country_data$rgdpna)))
+  sub <- country_data[,c('year','GDP_Growth')]
+  sub <- na.omit(sub)
+  
+  plot(country_data$year,
+     (country_data$csh_x*country_data$pl_x + country_data$csh_m*country_data$pl_m)*100,
+     ylab = '%',xlab='',typ='l',main=iso,ylim=c(-10,10))
+  lines(sub$year,
+        100*sub$GDP_Growth,col = 2)
+  legend('bottomleft',legend = c('Real GDP Growth','Trade Balance % of GDP'),col = c(2,1),lty = 1,cex = 0.5)
+}
+
+
+plot_net_exports_with_GDP('USA')
+plot_net_exports_with_GDP('CHN')
+plot_net_exports_with_GDP('DEU')
+plot_net_exports_with_GDP('GBR')
+
+avg_trade_balance_all_data<- tapply(pwt9.0$csh_x*pwt9.0$pl_x + pwt9.0$csh_m*pwt9.0$pl_m,
+       pwt9.0$isocode,function(x)mean(x,na.rm = T))
+
+avg_gdp_growth_all_data<- tapply(pwt9.0$rgdpna,
+       pwt9.0$isocode,function(x)mean(diff(log(x)),na.rm = T))
+
+
+avg_trade_balance_all_data <- na.omit(avg_trade_balance_all_data)
+avg_trade_balance_all_data <- avg_trade_balance_all_data[-0.5 < avg_trade_balance_all_data & avg_trade_balance_all_data < 0.5]
+avg_trade_balance_all_data <- data.frame(country = names(avg_trade_balance_all_data),
+                               trade_balance = as.numeric(avg_trade_balance_all_data))
+avg_trade_balance_all_data$Avg_GDP <- avg_gdp_growth_all_data[na.omit(match(names(avg_gdp_growth_all_data),avg_trade_balance_all_data[,1]))]
+
+
+
+plot(avg_trade_balance_all_data$trade_balance,avg_trade_balance_all_data$Avg_GDP)
+cor(avg_trade_balance_all_data$trade_balance,avg_trade_balance_all_data$Avg_GDP)
+summary(lm(Avg_GDP ~ trade_balance,data=avg_trade_balance_all_data))
+```
+
+The relationship in the cross-section between gdp growth and trade balances doesn't seem to be clear cut. Perhaps time series regressions may be more appropriate? Where there might exist some effects of trade deficits on future economic growth. 
+
+#Exchange Rates
+
+The exchange rate between two countries is the price at which residents of those countries trade with each other. The nominal exchange rate is the relative price of the currencies of two countries. For example:
+
+```{r}
+install.packages('quantmod')
+library(quantmod)
+quotes <- getQuote(c('EURUSD=X','GBPUSD=X','USDJPY=X'))
+quotes
+
+=getSymbols(c('EURUSD=X','GBPUSD=X','USDJPY=X'))
+eur_usd <- `EURUSD=X`
+plot(index(eur_usd),as.numeric(eur_usd[,6]),typ='l',xlab='',ylab='EUR/USD')
+
+gbp_usd <- `GBPUSD=X`
+plot(index(gbp_usd),as.numeric(gbp_usd[,6]),typ='l',xlab='',ylab='GBP/USD')
+
+usd_jpy <- `USDJPY=X`
+plot(index(usd_jpy),as.numeric(usd_jpy[,6]),typ='l',xlab='',ylab='USD/JPY')
+```
+
+The value EUR/USD tells us how many US dollars are needed to purchase one Euro (approximately \$1.14). USD/JPY tells us how many Japanese Yen are need to purchase one US Dollar (approximately \$113.21). How many Japanese Yen are needed to purchase one Euro? (Triangular-Arbitrage).
+
+When it takes less of one currency to purchase more of another currency, the currency is said to have appreciated (become stronger). When it takes more of one currency to purchase less of another currency, the currency is said to have depreciated (become weaker). The real exchange rate ($\epsilon$) between two countries is simply the nominal exchange rate ($e$, expressed in foreign per unit of domestic) adjusted for inflation across both countries:
+
+\[\epsilon = e \frac{p_{domestic}}{p_{foreign}}\]
+
+If the real exchange rate is high, foreign goods are relatively cheap, and domestic goods are relatively expensive. If the real exchange rate is low, foreign goods are relatively expensive, and domestic goods are relatively cheap. This has implications for Net Exports! If it is relatively expensive to purchase goods from aboard consumers will choose to purchase domestically produced goods (reducing imports). Furthermore, foreigners will want to purchase goods that are relatively cheap as well (increasing exports), leading to a positive impact on net exports. If it is relatively cheap to purchase goods from abroad consumers will choose to purchase foreign produced goods (increasing exports) and foreign consumer will import less goods. This relationship can be summarized as an inverse relationship between the real exchange rate and net exports. 
+
+```{r}
+real_fx_rate <- seq(0.5,2,by=0.001)
+net_exports <-  2000-2000*(real_fx_rate^(1/3))#Made it up..
+plot(net_exports,real_fx_rate,typ = 'l',ylab=expression(epsilon),xlab='Net Exports')
+abline(v = 0,lty = 2)
+```
+
+
+Recall that $NX = S - I$. At the equilbrium real exchange rate, the supply of dollar available from the net capital outflow balances the demand for dollars by foreigners buying our net exports.
+
+```{r}
+plot(net_exports,real_fx_rate,typ = 'l',ylab=expression(epsilon),xlab='Net Exports')
+abline(v = 200,col = 3)
+abline(h = real_fx_rate[which.min(abs(net_exports - 200))],lty = 2,col = 4)
+legend('topright',legend = c('NX',"EQ'm Exchange Rate",'S-I'),lty = c(1,2,1),col=c(1,4,3),cex=0.6)
+```
+
+Let's use this framework to analyze the impact of a protectionist policy. Suppose that the government prohibits the import of foreign cars. For any given real exchange rate, imports would now by lower, implying that net exports would be higher. Thus, the net exports schedule would shift outward. 
+
+
+```{r}
+plot(net_exports,real_fx_rate,typ = 'l',ylab=expression(epsilon),xlab='Net Exports')
+net_exports2 <-  2000-2000*((real_fx_rate)^(1/3)) + 0.5#Made it up.. 
+lines(net_exports2,real_fx_rate+0.5,col = 2)
+abline(v = 200,col = 3)
+abline(h = real_fx_rate[which.min(abs(net_exports - 200))],lty = 2,col = 4)
+abline(h = real_fx_rate[which.min(abs(net_exports2 - 200))]+0.5,lty = 2,col = 2) 
+legend('topright',legend = c('NX1',"EQ'm Exchange Rate1",'S-I','NX2',"EQ'm Exchange Rate2"),lty = c(1,2,1,1,2),col=c(1,4,3,2,2),cex=0.6)
+```
+
+This shift outward leads to an appreciation of the real exchange rate. The protectionist policy does not change savings nor investment. As a result, the protectionist policy does not affect the trade balance; the appreciation offsets the increase in net exports that is directly attributable to the trade restriction. The protectionist policy reduces both the quantity of imports \textbf{and} the quantity of exports. 
+
+We can also make predictions about nominal exchange rates:
+
+\[e_{t} = \epsilon_{t} \frac{p_{t,foreign}}{p_{t,domestic}}\]
+
+Taking logs and differences across time:
+
+\[\%\Delta e_{t} = \%\Delta\epsilon_{t} + \%\Delta \pi_{t,foreign} - \%\Delta \pi_{t,domestic}\]
+
+If a country has a high rate of inflation relative to the United States, a dollar will buy an increasing amount of the foreign currency over time. If a country has a low rate of inflation relative to the United States, a dollar wll buy a decreasing amount of the foreign currency over time. 
+
+```{r}
+#Venezuela Bolivar  
+getSymbols('VEF=X')
+usd_vef <- `VEF=X`
+plot(index(usd_vef),as.numeric(usd_vef[,6]),typ='l',xlab='',ylab='USD/VEF')
+```
+
+
+
+
+
+
+
+
+
+
+
