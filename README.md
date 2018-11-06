@@ -1,4 +1,4 @@
-# Macroeconomics at Claremont Graduate University
+# Macroeconomic Analysis with R at Claremont Graduate University
 
 The aim of this class is to equip you with a set of tools to analyze macroeconomic movements in the long and short-run. 
 We will use macroeconomic data on incomes, prices, unemployment, interest rates, etc. to help model various pieces of the economy. We will begin by analyzing clasical theory in macroeconomics, to model long-run dynamics, then proceed to analyze new Keynesian models, to model short-run dyanmics. 
