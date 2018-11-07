@@ -21,4 +21,4 @@ I am an adjunct professor at Claremont Graduate Universtiy in the department of 
 
 [Lecture 5: Analyzing Economic Growth and Endogenous Growth Theory](https://github.com/hisamsabouni/macroLectures/blob/master/lecture_5.pdf)
 
-[Lecture 6: Open economies and Exchange Rates](https://github.com/hisamsabouni/macroLectures/blob/master/lecture_6.pdf)
+[Lecture 6: Open Economies and Exchange Rates](https://github.com/hisamsabouni/macroLectures/blob/master/lecture_6.pdf)
