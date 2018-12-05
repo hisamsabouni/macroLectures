@@ -22,3 +22,7 @@ I am an adjunct professor at Claremont Graduate Universtiy in the department of 
 [Lecture 5: Analyzing Economic Growth and Endogenous Growth Theory](https://github.com/hisamsabouni/macroLectures/blob/master/lecture_5.pdf)
 
 [Lecture 6: Open Economies and Exchange Rates](https://github.com/hisamsabouni/macroLectures/blob/master/lecture_6.pdf)
+
+[Lecture 7: New Keynsian Phillips Curve, Natural Rate of Unemployment (NAIRU), IS-LM, Aggregate Demand, and Impulse Reponse Functions](https://github.com/hisamsabouni/macroLectures/blob/master/lecture_7.pdf)
+
+[Lecture 8: Time-Series Econometrics for Macroeconomic Analysis](https://github.com/hisamsabouni/macroLectures/blob/master/lecture_8.pdf)
