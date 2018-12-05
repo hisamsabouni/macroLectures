@@ -1,0 +1,297 @@
+---
+title: "Time Series"
+author: "Hisam Sabouni"
+date: "12/3/2018"
+output: pdf_document
+linestretch: 1.5
+---
+
+\fontfamily{qtm}
+\fontsize{12}{12}
+\selectfont
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,tidy.opts=list(width.cutoff=45),tidy=TRUE,warning = F,message = F,fig.align = 'center')
+```
+
+#Goal
+
+The primary focus of this chapter is to introduce methods to analyze economic data that evolves over time. We will first cover some basic statistical properties of time-series data then proceed to introduce a variety of econometric methods that can be utilized to estimate relationships in economic variables that can be used for things like forecasting. 
+
+# Stationarity
+A time series $\{r_{t}\}$ is said to be strictly stationary if all of the moments of the distribution are assumed to be fixed across time. A \emph{weaker} version of this assumption is weak-stationarity, which implies that the first and second moments are fixed across time. That is for all time, (1) $E(r_{t}) = \mu$, (2)$Var(r_{t}) = \gamma_{0}$, (3) $Cov(r_{t},r_{t-l}) = \gamma_{l}$. Weak stationarity implies that if we were to visualize our data over time, we would find the data would have a constant variation around a fixed level. Weak-stationarity is a very common assumption in econometrics. The second assumption of a fixed second moment across time can however be loosened up through use of conditional heteroskedastic models.
+
+# Autocorrelation Function (ACF)
+Correlation measures the strength of linear dependence between to random variables. Auto-correlation is a measure of linear dependence between $r_{t}$ and its past values $r_{t-l}$. Autocorrelation is measured as:
+
+\[\rho_{t} = \frac{Cov(r_{t},r_{t-l})}{\sqrt{Var(r_t)Var(r_{t-l})}} = \frac{Cov(r_{t},r_{t-l})}{Var(r_t)} = \frac{\gamma_{l}}{\gamma_{0}}\]
+
+In other words, given a sample of returns $\{r_{t}\}_{t=1}^{T}$ the sample lag-$l$ autocorrelation function is measured as:
+
+\[\hat{\rho}_{l} = \frac{\sum\limits_{t=l+1}^{T}(r_{t} - \bar{r})(r_{t-l} - \bar{r})}{\sum\limits_{t=1}^{T}(r_{t} - \bar{r})^2}\]
+
+Box, Jenkins, and Reinsel (1994) found that $\hat{\rho}_{l}$ is asymptotically normal with mean zero and variance of $1/T$ for any fixed positive integer $l$. Furthermore, if $r_{t}$ is weakly stationary satisfying $r_{t} = \mu + \sum\limits_{i = 0}^{q}\psi_{i}a_{t-i}$, where $\psi_{0} = 1$ and $\{a_j\}$ is a set of i.i.d random variables with mean zero, then $\hat{rho}_{l}$ is asymptotically normal with mean zero and variance $(1+2\sum\limits_{i = 1}^{q}\rho_{i}^2)/T$. As a result, the significance of a given level of autocorrelation can be tested by forming a t-statistic:
+
+\[t = \frac{\hat{\rho}_{l}}{(1+2\sum\limits_{i = 1}^{q}\rho_{i}^2)/T}\]
+
+R has the ability to estimate the autocorrelation function of a given series through the acf() function. 
+
+```{r}
+library(quantmod)
+#Real gross domestic product per capita (A939RX0Q048SBEA)
+getSymbols('A939RX0Q048SBEA',src = 'FRED')
+rets <- 400*Delt(A939RX0Q048SBEA,type = 'log')
+head(rets)
+tail(rets)
+summary(rets)
+#Acf
+acf(na.omit(rets))
+```
+
+
+#Autoregressive Models
+If one finds significant autocorrelation levels, it makes sense to leverage this information in a regression based context to generate predictions. An autoregressive model does exactly that:
+
+\[r_{t} = \phi_{0} + \sum\limits_{i = 1}^{P}\phi_{i}r_{t-i} + a_{t}\]
+
+Here we have an autoregressive model with $P$ lags, AR(P), of the dependent variable as predictors of the next time period, where $a_{t}\sim N(0,1)$. Under the assumptions of weak stationarity we can also derive some useful properties about this model. For instance if we take the expectation of the right and left hand side of the above equation we can estimate the mean of the model:
+
+\[E(r_{t}) = E(\phi_{0} + \sum\limits_{i = 1}^{P}\phi_{i}r_{t-i} + a_{t})\]
+
+By applying the linearity property of the expectation operator we can break apart the right hand side into separate expectations.
+
+\[E(r_{t}) = E(\phi_{0}) + E(\sum\limits_{i = 1}^{P}\phi_{i}r_{t-i}) + E(a_{t})\]
+
+By assuming weak stationarity, we have that $E(r_{t}) = \mu \ \forall t$. Furthermore, by our assumptions $E(a_{t}) = 0$. 
+
+\[\mu = \phi_{0} + \sum\limits_{i = 1}^{P}\phi_{i}\mu\]
+
+\[\mu = \frac{\phi_{0}}{1-\sum\limits_{i = 1}^{P}\phi_{i}}\]
+
+Notice that this implies that if $\phi_{0} = 0 \rightarrow \mu = 0$ and that $\sum\limits_{i = 1}^{P}\phi_{i} \neq 1$. We can also estimate the variance of our model as follows:
+
+\[Var(r_{t}) = Var(\phi_{0} + \sum\limits_{i = 1}^{P}\phi_{i}r_{t-i} + a_{t})\]
+
+\[Var(r_{t}) = Var(\sum\limits_{i = 1}^{P}\phi_{i}r_{t-i}) + Var(a_{t})\]
+
+\[Var(r_{t}) = \sum\limits_{i = 1}^{P}\phi_{i}^2Var(r_{t-i}) + Var(a_{t})\]
+
+\[Var(r_{t}) - \sum\limits_{i = 1}^{P}\phi_{i}^2Var(r_{t-i}) = \sigma^2\]
+
+\[Var(r_{t}) = \frac{\sigma^2}{1-\sum\limits_{i = 1}^{P}\phi_{i}^2}\]
+
+Here $\sigma^2$ is the variance of $a_{t}$. Notice that the second moment implies that $\sum\limits_{i = 1}^{P}\phi_{i}^2 < 1$, otherwise we have a negative variance. 
+
+#Autocorrelation of AR(P) Models (Side-note)
+From our autoregressive models we can directly derive our autocorrelation functions. Lets take a simple AR(1) model as an example. 
+
+\[r_{t} = \phi_{0} + \phi_{1}r_{t-1} + a_{t}\]
+
+If we again, take the expectation of our autogressive model we can solve for $\phi_{0}$:
+
+\[E(r_{t}) = E(\phi_{0}) + E(\phi_{1}r_{t-1}) + E(a_{t})\]
+
+\[\phi_{0} = \mu - \phi_{1}\mu\]
+
+Now, if we plug this value back into our AR(P) model, we have:
+
+\[r_{t} =  (\mu - \phi_{1}\mu) + \phi_{1}r_{t-1} + a_{t}\]
+
+If we re-arrange a few terms, we have:
+
+\[r_{t} - \mu = \phi_{1}(r_{t-1}-\mu) + a_{t}\]
+
+If we multiply both sides of our equation by $r_{t-l} - \mu$ and take the expectation of both sides we will have a measure of the covariance between time $t$ and time $t-l$.
+
+\[E((r_{t} - \mu)(r_{t-l} - \mu)) = \phi_{1}E((r_{t-1}-\mu)(r_{t-l}-\mu)) + E(a_{t}(r_{t-l}-\mu))\]
+
+For cases where $l$ is greater than zero, we have that the lag-$l$ autocovariance is:
+
+\[\gamma_{l} = \phi_{1}\gamma_{l-1}\]
+
+For the case where $l$ is exactly zero, we have that 
+
+\[\gamma_{l} = \phi_{1}\gamma_{l-1} + \sigma^2\]
+
+#In practice
+In general, one should determine the optimal number of autoregressive lags to include in their models by analyzing the residuals of their fitted AR(P) model (residuals = $r_t - \hat{r}_{t}$, where $\hat{r}_t$ is the predicted value of $r_{t}$ using the AR(P) model). Typically, lags are successively added until there is no significant autocorrelation present in the residuals. Check for significant autocorrelation in the residuals is done through Ljung and Box's (1978) test:
+
+\[Q(m) = T(T+2)\sum\limits_{l = 1}^{m}\frac{\hat{\rho}_l^{2}}{T-l}\]
+
+Here the null hypothesis $H_{0}: \rho_1=...=\rho_m = 0$ and the alternative hypothesis is $H_{a}:p_i \neq0$ for some $i \in \{1,...,m\}$. Q is asymptotically chi-squared with m degrees of freedom. 
+
+We can estimate AR(P) models in R quite easily through the arima() function as well as analyze the residuals through the tsdiag() function. 
+
+```{r}
+##Estimate arima(x,order=c(AR,Diff,MA))
+mdl <- arima(rets,order = c(5,0,0))
+mdl
+##Check residuals
+tsdiag(mdl)
+
+##Predict
+predict(mdl,10)
+#coef(mdl)[6]/(1-sum(coef(mdl)[1:5]))
+```
+
+Given an AR(P) model we can quite easily generate forecasts as well. For example, if we have an AR(1) model and are at time $t$ wanting to forecast time $t+1$, we can take our estimated model and do as follows:
+
+\[\hat{r}_{t+1} = \hat{\phi}_{0} + \hat{\phi}_{1}r_{t} + a_{t+1}\]
+
+If we condition on the information available at time $t$, denoted by $F$, then we have:
+
+\[E(\hat{r}_{t+1}|F) = E(\hat{\phi}_{0} + \hat{\phi}_{1}r_{t} + a_{t+1}|F)\]
+
+$\hat{\phi}_{0}$ is a constant, so we can pull that directly out of the conditional expectation operator, $\hat{\phi}_{1}r_{t}$ is readily available as of time $t$ and as a result should be treated as a constant which can also be pulled out of the conditional expectation, $a_{t+1}$ is i.i.d. white noise which is independent of information as at time $t$ (its a \emph{shock} at time t+1). As a result we have:
+
+\[E(\hat{r}_{t+1}|F) = \hat{\phi}_{0} + \hat{\phi}_{1}r_{t} + E(a_{t+1})\]
+
+\[E(\hat{r}_{t+1}|F) = \hat{\phi}_{0} + \hat{\phi}_{1}r_{t}\]
+
+This same logic can be extended to a multi-step forecast for an AR(P) model:
+
+\[E(\hat{r}_{t+h}|F)= \hat{\phi}_{0} + \sum\limits_{i = 1}^{P}\hat{\phi}_{i}\hat{r}_{t} \]
+
+where $\hat{r}_t$ is previously forecasted return for $h > 0$ and the actual return for $h \le 0$.
+
+
+#Moving Average Models
+In addition to including lags of our dependent variable in our regressions, we can also include lags of previous \emph{shocks}. That is we can include lags of our error term as well:
+
+\[r_{t} = \phi_{0} + \sum\limits_{i = 1}^{P}\phi_{i}r_{t-i} + a_{t} + \sum\limits_{j = 0}^{Q}\theta a_{t-j}\]
+
+Models of this sort are referred to as ARMA(P,Q). The mean of an ARMA(P,Q) is the same as that of an ARMA(P), as a result of $a_{t}\sim N(0,1)$. The variance of an ARMA(P,Q) however changes. Lets take an ARMA(1,1) as an example:
+
+\[r_{t} = \phi_{0} + \phi_{1}r_{t-1} + a_{t} + \theta a_{t-1}\]
+
+If we multiply both sides by $a_{t}$ and take the expectation we have:
+
+\[E(a_{t}r_{t}) = E(a_{t}(\phi_{0} + \phi_{1}r_{t-1} + a_{t} + \theta a_{t-1})) = \sigma^2\]
+
+If we had taken the variance of the ARMA(1,1) we would have:
+
+\[Var(r_{t}) = Var(\phi_{0} + \phi_{1}r_{t-1} + a_{t} + \theta_{1} a_{t-1})\]
+
+\[Var(r_{t}) = Var(a_{t}) + Var(\theta_{1} a_{t-1}+\phi_{1}r_{t-1})\]
+
+\[Var(r_{t}) = Var(a_{t})+ Var(\phi_{1}r_{t-1}) + Var(\theta_{1} a_{t-1}) + 2E(\phi_{1}(\phi_0 + \phi_{1}r_{t-2} + a_{t-1} + \theta_{1}a_{t-2})\theta_{1} a_{t-1})\]
+
+\[Var(r_{t}) =  Var(a_{t}) + Var(\phi_{1}r_{t-1})+Var(\theta_{1} a_{t-1}) + 2E(\phi_{1}a_{t-1}\theta_{1} a_{t-1})\]
+
+\[Var(r_{t}) - \phi_{1}^{2}Var(r_{t-1}) = \sigma^2 + \theta_{1}\sigma^2 + 2\phi_{1}\theta_{1}\sigma^2\]
+
+\[Var(r_{t}) = \frac{\sigma^2(1 + \theta_{1} + 2\phi_{1}\theta_{1})}{1-\phi_{1}^{2}}\]
+
+We can generalize the above to an ARMA(P,Q) as:
+\[Var(r_{t}) = \frac{\sigma^2(1 + \theta_{1} + 2\sum\limits_{k=1}^{M}\phi_{k}\theta_{k})}{1-\sum\limits_{i=1}^{P}\phi_{i}^{2}}\]
+
+where $M = min(P,Q)$. ARMA(P,Q) models are also directly estimatable through the arima() function in R.
+
+```{r,echo =T,results='asis'}
+##ACF
+acf(na.omit(rets))
+pacf(na.omit(rets))
+##Arima
+mdl <- arima(rets,order=c(1,0,2))
+##tsdiag to check the residuals
+tsdiag(mdl)
+##Make a forecast
+forecast <- predict(mdl,8)
+
+plot(c(as.numeric(rets)[(nrow(rets)-20):nrow(rets)]),xlim=c(0,29),typ='l',ylim=c(-4,7),ylab='Real GDP per Capita Growth')
+lines(21:29,c(as.numeric(rets)[nrow(rets)],forecast$pred),typ='b')
+lines(21:29,c(as.numeric(rets)[nrow(rets)],forecast$pred + forecast$se),typ='b',col=4)
+lines(21:29,c(as.numeric(rets)[nrow(rets)],forecast$pred - forecast$se),typ='b',col=4)
+```
+
+#VAR
+
+A VAR is a n-equation, n-variable linear model in which each variable is in turn explained by its own lagged values, plus current and past values of the remaining n-1 variables initially proposed by Sims (1980). For example, a lag-2 model of two variables may take the form of:
+
+\[X_{t} = \beta_{0} + \beta_{1} X_{t-1} + \beta_{2}X_{t-2}+\beta_3 Y_{t-1} + \beta_{4}Y_{t-2}+\zeta_{t}\]
+
+\[Y_{t} = \alpha_{0} + \alpha_{1} X_{t-1} + \alpha_{2}X_{t-2}+\alpha_{3} Y_{t-1} + \alpha_{4}Y_{t-2}+\eta_{t}\]
+
+Each equation in the system can be estimated by ordinary least squares (OLS) regression. With the estimated models in hand one can simulate a shock to one variable and see how future values of other variables in the system are impacted. VARs are extremely useful in the real world, given their easy of interpretation and implementation. Typically, the number of lags selected in the model, if not guided by some economic theory, is chosen to remove autocorrelation from the residuals of the model and by some criterion. Akaike's information criterion (AIC) or Schwarz's Bayseian information criterion are usually used:
+
+\[AIC = log\hat{\sigma}^{2} + 2\frac{m*p+1}{T}\]
+
+\[BIC = log\hat{\sigma}^{2} + \frac{m*p+1}{T}log(T)\]
+
+The model with the smallest AIC or BIC value is preferred. 
+
+```{r,fig.height=9}
+library(quantmod)
+install.packages('vars')
+library(vars)
+
+getSymbols(c('GDPCTPI','UNRATE','DGS10','A939RX0Q048SBEA'),src='FRED')
+#Ordering of variables matters for impulse response functions
+macro_data <- merge(UNRATE,GDPCTPI,A939RX0Q048SBEA,DGS10)
+macro_data <- na.omit(macro_data)
+colnames(macro_data) <- c('unemployment','gdp_deflator','gdp','ten_year')
+macro_data$gdp_deflator <- 400*Delt(macro_data$gdp_deflator,type = 'log')
+macro_data$gdp <- 400*Delt(macro_data$gdp,typ='log')
+macro_data <- na.omit(macro_data)
+macro_data <- macro_data[index(macro_data) >= '1960-01-01',]
+VARselect(macro_data) #Information Criterion suggests 1, but 2 is used to remove autocorrelation from GDP
+macro_var <- VAR(macro_data,p=2)
+summary(macro_var)
+Box.test(macro_var$varresult$gdp_deflator$residuals,lag = 8)
+Box.test(macro_var$varresult$unemployment$residuals,lag = 8)
+Box.test(macro_var$varresult$ten_year$residuals,lag = 8) 
+Box.test(macro_var$varresult$gdp$residuals,lag = 8) 
+#Expected dynamics?
+plot(irf(macro_var,impulse = 'unemployment',boot = 500,ortho = F))
+#Forecast all variables in our system for 8 quarters ahead
+forecast_macro <- predict(macro_var,n.ahead=8)
+plot(forecast_macro)
+```
+
+# Forecast Evaluation
+
+Denote forecast errors as $e_{T+h} = y_{T+h} - \hat{y}_{T+h}$. The most commonly used criteria for forecast evaluation are mean absolute deviation:
+
+\[MAD = \frac{1}{H}\sum_{h = 1}^{H}|e_{T+h}|\]
+
+and the root mean squared error:
+
+\[RMSE = \sqrt{ \frac{1}{H}\sum_{h = 1}^{H}e_{T+h}^{2}}\]
+
+The lower these measures the more accurate the forecasts. Lets see how our VAR model has performed historically.
+
+```{r}
+performance_tracker_mad <- matrix(NA,20,4)
+performance_tracker_rmse <- matrix(NA,20,4)
+performance_tracker_in_range <- matrix(NA,20,4)
+steps_ahead <- 8
+for(i in 89:(nrow(macro_data)-steps_ahead)){
+  macro_var <- VAR(macro_data[1:i],p=2)
+  forecast_macro <- predict(macro_var,n.ahead = steps_ahead)
+  actual_data <- macro_data[(i+1):(i+steps_ahead),]
+  for(j in 1:length(forecast_macro$fcst)){
+    #names(forecast_macro$fcst) #When j = 1, we are getting unemployment data
+    #Mean absolute error#
+    performance_tracker_mad[i-88,j] <- mean(abs(actual_data[,j] - forecast_macro$fcst[[j]][,1]))
+    #Root mean squared error#
+    performance_tracker_rmse[i-88,j] <- sqrt(mean((actual_data[,j] - forecast_macro$fcst[[j]][,1])^2))
+    #Check the percentage of actual values within our confidence interval#
+    performance_tracker_in_range[i-88,j] <- mean(ifelse(forecast_macro$fcst[[j]][,2]<=actual_data[,j]&actual_data[,j]<= forecast_macro$fcst[[j]][,3],1,0))
+  }
+}
+colnames(performance_tracker_mad) <- colnames(macro_data)
+print('------Mean Absolute Deviation------')
+summary(performance_tracker_mad)
+colnames(performance_tracker_rmse) <- colnames(macro_data)
+print('------Root Mean Squared Error------')
+summary(performance_tracker_rmse)
+colnames(performance_tracker_in_range) <- colnames(macro_data)
+print('------Confidence Interval Check------')
+summary(performance_tracker_in_range)
+```
+
+
+
+
+

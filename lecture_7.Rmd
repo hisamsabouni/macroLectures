@@ -1,0 +1,870 @@
+---
+title: "Short-Run Models"
+author: "Hisam Sabouni"
+date: "11/14/2018"
+output: pdf_document
+linestretch: 1.5
+header-includes:
+ - \usepackage{float}
+---
+\definecolor{CornflowerBlue}{rgb}{0.8705882,0.9176471,0.9647059}
+
+
+\fontfamily{qtm}
+\fontsize{12}{12}
+\selectfont
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,tidy.opts=list(width.cutoff=45),tidy=TRUE,warning = F,message = F,fig.align = 'center')
+```
+
+#Overview
+
+So far we have covered models of long-run economic growth: the Solow-Swan model and Romer's endgoenous growth model. These have are \emph{supply-side} models that were entirely focused on the productive capacity of the economy (based on capital and knowledge accumulation). 
+
+```{r}
+library(quantmod)
+getSymbols(c('GDPC1','CPIAUCSL'),src='FRED') #Real GDP per Capita
+df <- merge(GDPC1,CPIAUCSL)
+df <- na.omit(df)
+decades <- paste(seq(1950,2010,by=10),'-01-01',sep='')
+decades<- df[as.character(index(df))%in% decades,]
+plot(as.numeric(decades[,1]),as.numeric(decades[,2]),ylab='Price',xlab='Output, Income',ylim=c(0,300))
+abline(v = as.numeric(decades[,1]))
+text(as.numeric(decades[,1]),rep(150,nrow(decades)),paste('Agg. Supply',c(50,60,70,80,90,'00',10)),pos=2,srt=90,cex=0.5)
+```
+
+These models describe how the economy is expected to evolve over decades. If you recall, the long-run models had full price and wage flexibility. In a frictionless economy, employment and output are always at the full-employment level. 
+
+Along the way to these long-run equilbriums economies experience a variety of \emph{shocks} that make movements to the equilbrium not as smooth as predicted by the long-run models. To capture these shocks we will introduce models for short-run dynamics. One of the core assumptions we are going to make in our analysis is that in the short-run prices are \emph{sticky}. That is, prices are assumed to not move. Furthermore, we will assume that producers will be willing to supply as many goods as demanded at that sticky price level. 
+
+To clarify, in the short-run we are talking about models that desribe the economy over the course of a few months. The assumptions above all indicate that in the short-run aggregate supply is actually a horizontal line. 
+
+#Aggregate Supply Adjustment Process
+
+The dynamics that will allow us to transition from short-run to long-run are goverened by the \emph{Phillips curve}. Phillips in 1958 found an empirical observation that there is an inverse relationship between the rate of unemployment and the rate of increase in wages. The higher the rate of unemployment, the lower the rate of wage inflation. Let $W_{t}$ be the wage this preiod, and $W_{t+1}$ be the wage next period, wage inflation is therefore:
+
+\[g_{w} = \frac{W_{t+1} - W_{t}}{W_{t}}\]
+
+The relation with unemployment can be written as:
+
+\[g_{w} = -\epsilon(u-u^{*})\]
+
+Here $u$ is the current prevailing rate of unemployment and $u*$ is the \emph{natural} rate of unemployment in the economy (assuming no frictions, no efficency wage theory, labor unions, coordination problems, etc.). 
+
+We can also write this in terms of the level of wages:
+
+\[W_{t+1} = W_{t}(1-\epsilon(u-u*))\]
+
+which tells us that for wages to rise above their previous level, unemployment must fall below the natural rate. 
+
+This relation held beautifully in the 1960s:
+
+```{r}
+getSymbols(c('UNRATE','CPIAUCSL'),src='FRED') #Real GDP per Capita
+head(CPIAUCSL)
+unemp_cpi <- na.omit(merge(UNRATE,100*Delt(CPIAUCSL,k=12)))
+colnames(unemp_cpi) <- c('UNEMP','CPI')
+head(unemp_cpi)
+sixties <- unemp_cpi[grep('^196',index(unemp_cpi)),]
+plot(as.numeric(sixties[,1]),as.numeric(sixties[,2]),xlab='Unemployment Rate',ylab='Inflation Rate (CPI YoY)')
+```
+
+
+But fell into controversy as time passed:
+
+
+```{r}
+plot(as.numeric(unemp_cpi[,1]),as.numeric(unemp_cpi[,2]),xlab='Unemployment Rate',ylab='Inflation Rate (CPI YoY)')
+```
+
+
+In the 70s when the short-run relationship with unemployment and inflation broke down the model was extended to include expectations:
+
+\[g_{w}-\pi_{e} = -\epsilon(u-u^{*})\]
+
+When workers and firms bargain over wages, they are concerned with the real value of the wage. As a result workers and firm attempt to include in their contracts their expecations about future inflation. This formulation is known as the Inflation-Expectation Augmented Phillips curve. If we assume that real wages are constant, actual price inflation is the same as wage inflation:
+
+\[\pi =\pi_{e} -\epsilon(u-u^{*})\]
+
+If we make the assumption that expected inflation is simply the inflation in the previous period, how well does the expectations augmented Phillips curve fit the data if we assume that $\pi_{e} = \pi_{t-1}$?
+
+```{r}
+#Look for rows that end with -12-01 -> get the last month of every year
+unemp_cpi_annual <- unemp_cpi[grep('-12-01$',index(unemp_cpi)),]
+head(unemp_cpi_annual)
+mdl <- lm(diff(unemp_cpi_annual[,2]) ~ unemp_cpi_annual[,1])
+summary(mdl)
+plot(as.numeric(unemp_cpi_annual[,1]),diff(unemp_cpi_annual[,2]),xlab='Unemployment Rate',ylab='Change in Inflation Rate (CPI YoY)')
+abline(mdl,col = 4)
+text(9,6,'diff CPI = 2.3941 - 0.41U')
+#pi - pi_{t-1} = -beta(u -u*) + error
+#Let u* be a constant 
+#pi - pi_{t-1} = beta u* - beta u + error
+#constant = beta u*
+#pi - pi_{t-1} = constant - beta u + error
+# -> constant/beta = u*
+nairu <- mdl$coefficients[1]/abs(mdl$coefficients[2])
+nairu
+#Or 
+##(pi - pi_{t-1})/beta + u = u*  + error/beta
+u_star_plus_v <- as.numeric(unemp_cpi_annual[,1]) + as.numeric(diff(unemp_cpi_annual[,2]))/abs(mdl$coefficients[2])
+
+
+
+plot(index(unemp_cpi_annual)[-c(1:12)],u_star_plus_v[-c(1:12)],typ='l',ylab='NAIRU')
+library(quantmod)
+smooth_ustar <- SMA(u_star_plus_v,12)
+lines(index(unemp_cpi_annual),smooth_ustar,col = 4,lwd=2)
+legend('bottomleft',legend = c('U* + error/beta','U*'),lty = 1,col = c(1,4),lwd=c(1,4),cex=0.75)
+```
+
+Using a simple linear regression we have that $\epsilon = -0.41$, indicating that one extra point of unemployment reduces inflation by about one-half of a percentage point. Keep in mind the current size of the civilian labor force is ~162 million individuals. A one percentage point up tick in unemployment corresponds to about 1.62 million people losing their jobs. Nonetheless, this estimate tells us that the short-run Phillips curve is quite flat, even though we know that the long-run Phillips curve is vertical (at the natural rate of unemployment).
+
+So far we have discussed the relationship between inflation and unemployment. We can extend the model to be our short-run aggregate supply function by making a link between unemployment and output. \textbf{Okun's law} makes this exact connection, where 1 extra point of unemployment costs about 2 percent of GDP:
+
+
+\[\frac{Y-Y^*}{Y*} = -\omega(u-u^*)\]
+
+
+```{r}
+getSymbols(c('GDPC1','UNRATE'),src='FRED') #Real GDP per Capita
+gdp_unrate <- merge(GDPC1,UNRATE)
+gdp_unrate <- na.omit(gdp_unrate)
+gdp_unrate[,1] <- 100*Delt(gdp_unrate[,1],k=4)
+gdp_unrate[,2] <- diff(gdp_unrate[,2],lag=4)
+head(gdp_unrate)
+gdp_unrate <- na.omit(gdp_unrate)
+#gdp_unrate <- gdp_unrate[grep('-10-01',index(gdp_unrate)),]
+#head(gdp_unrate)
+
+mdl2 <- lm(gdp_unrate[,1]~gdp_unrate[,2])
+plot(as.numeric(gdp_unrate[,2]),as.numeric(gdp_unrate[,1]),ylim=c(-4,11),xlim=c(-3,4),xlab='Change in Unemployment',ylab='Growth of Real GDP')
+abline(mdl2,col=4)
+summary(mdl2)
+```
+
+
+The next step is to make a more formal link between wages and prices. Suppose firms set prices to a fixed markup above their costs:
+
+\[P_{t} = \frac{(1+z)W_{t}}{a}\]
+
+\[W_{t} = \frac{aP_{t}}{(1+z)}\]
+
+Here we assume that firms charge price $P$ for their output, which is $(1+z)$ greater than their cost per unit (a is the number of units, W is the wage).
+
+Plugging the above into our expectations-augmented Phillips curve:
+
+\[g_{w}-\pi_{e} = -\epsilon(u-u^{*})\]
+
+\[\frac{W_{t+1} - W_{t}}{W_{t}} = \pi_{e}  -\epsilon(u-u^{*})\]
+
+\[W_{t+1} = W_{t}(\pi_{e}  -\epsilon(u-u^{*}))+W_{t}\]
+
+\[\frac{aP_{t+1}}{(1+z)} = \frac{aP_{t}}{(1+z)}(\pi_{e}  -\epsilon(u-u^{*}))+\frac{aP_{t}}{(1+z)}\]
+
+\[P_{t+1} = P_{t}(\pi_{e}  -\epsilon(u-u^{*}))+P_{t}\]
+
+\[P_{t+1} = P_{t}(\frac{P^{e}_{t+1}-P_{t}}{P_{t}}  -\epsilon(u-u^{*}))+P_{t}\]
+
+\[P_{t+1} = P^{e}_{t+1}-P_{t}\epsilon(u-u^{*}))\]
+
+Using Okun's Law:
+
+\[\frac{Y-Y^*}{Y*} = -\omega(u-u^*)\]
+
+\[\frac{1}{\omega}\frac{Y-Y^*}{Y*} = -(u-u^*)\]
+
+\[P_{t+1} = P^{e}_{t+1} + P_{t}\frac{\epsilon}{\omega}(\frac{Y-Y^{*}}{Y^{*}})\]
+
+\[\pi_{t+1} = \pi^{e}_{t+1} + \frac{\epsilon}{\omega}(\frac{Y-Y^{*}}{Y^{*}})\]
+
+Recall that above we estimated $\omega \approx 1.6$ and $\epsilon \approx 0.41$, which tells us that $\frac{\epsilon}{\omega} = \frac{0.41}{1.6}=0.25$. When output exceeds the \emph{natural} rate of output by 4\%, inflation increases by 1\%, holding inflationary expectations constant. Similarly a 4\% decrease in output will reduce inflation by 1\%. (Most estimates are in the range of 2-4\%).
+
+For simplicity we can approximate our Phillips curve as:
+
+\[P_{t+1} =  P^{e}_{t+1} (1+\lambda(Y-Y^*))\]
+
+Here $\lambda = \frac{P_{t}\epsilon}{P^{e}_{t+1}\omega Y^{*}}$
+
+This is our aggregate supply curve under the condition in which wages are less than fully flexible. Price increases with the level of output because increased output implies increased employment and therefore higher labor costs, which are passed along through the fixed markup. Inflation expectations shift the aggregate supply curve up and down over time, while the steepness is goverened by the link of inflation and output through unemployment.
+
+#Aggregate Demand
+
+##Goods Market
+
+So far we have only disscussed the supply-side of the economy, that is the producer side of the economy. The flip-side of the coin is what households, businesses, government, and foreigners wish to consume. Recall our national income accounts identity which summarized all aggregate demand (AD) for the goods market:
+
+\[AD = C + I + G + NX\]
+
+We can expand this identity by making assumptions about the structure of each of our variables:
+
+\[C = \bar{C} + c(Y - tY +ztY)\]
+
+\[G = tY - zY - \bar{G}\]
+
+\[I = \bar{I} - br,\ b>0\]
+
+\[NX = \bar{NX}\]
+
+Here a $\bar{\cdot}$ above a variable denotes that it is exogenously fixed at some autnomous level. 
+
+\textbf{Consumption:}
+
+\[C = \bar{C} + c(Y - tY + ztY)\]
+
+> $\bar{C}$ denotes the level of autonomous spending of consumers, that is the amount household will spend regardless of their income. 
+
+> $Y - tY + ztY$ is the disposable income level of consumers (income less taxes plus transfer payments from the government)
+
+> $c$ is the marginal propensity to consume. For each dollar increase in disposable income, $c$ will be consumed and $1-c$ will be saved. 
+
+\textbf{Government:}
+
+\[G = tY - ztY - \bar{G}\]
+
+> $tY$ is the governments tax revenue
+
+> $ztY$ is an exogenous amount of transfer payments the government make to households (think of social security, food stamps, unemployment benefits)
+
+> $\bar{G}$ is the autonomous level of government spending and investment. Note that our definition of government includes federal, state and local governments.
+
+\textbf{Investment:}
+
+\[I = \bar{I} - br,\ b>0\]
+
+> We are assuming there is some fixed level of investment that exists in the economy regardless of interest rates $\bar{I}$.
+
+> There is an inverse relationship between the amount of investment that takes place and the prevailing interest rate $r$ in the economy. The higher the interest rate the lower the amount of investment that takes place. The degree to which investment responds to interest rates is goverened by $b$; a large $b$ implies a small increase in $r$ will lead to a large decline in investment and a small $b$ implies a large increase in $r$ will have a small effect on investment. Generally, $b$ is assumed to be large.
+
+\textbf{Net Exports:}
+
+\[NX = \bar{NX}\]
+
+> We are keeping net exports fixed at some exogenous level for now. Extensions of this model that explicitly model net exports is called the Mundell-Flemming model. 
+
+Substituting all of these equations into our national income accounts identity:
+
+\[AD = \bar{C} + c(Y - tY + ztY) + \bar{I} - br + tY - ztY - \bar{G}+ \bar{NX}\]
+
+Given that we have a few variables that are all autonomous (fixed at some level) we can further simplify to:
+
+\[AD = \bar{A} + Y(c - ct + czt + t - zt) - br\]
+
+where $\bar{A} = \bar{C} + \bar{I} + \bar{G} + \bar{NX}$. In equilbrium aggregate demand equals aggregate supply:
+
+\[Y= AD = \bar{A} + Y(c(1 - t + zt) + t - zt)  - br\]
+
+We can group common terms and solve for output:
+
+\[Y = \frac{\bar{A} - br}{1-(c(1 - t + zt) + t - zt)}\]
+
+or,
+
+\[Y = \alpha_{G}(\bar{A} - br)\]
+
+Where $\alpha_{G} = \frac{1}{1+c(t - 1 - zt) - t(1-z)}$. This equation is actually known as the investment-savings curve, which is one-half of the cannonical IS-LM framework which characterizes the equilbrium between goods and money markets. This equation tells us there exists a negative relationship between interest rates and output/income as a result of the amount of investment in the economy declining as interest rates rise. 
+
+```{r}
+#Change in marginal propensity to consume
+mpc <- 0.8
+tax_rate <- 0.25
+z <- 0.9
+autonomous_spend <- 10000
+r <- seq(0.1,0.01,by=-0.01)
+b <- 30000
+alpha_g <- 1/(1+mpc*(tax_rate - 1 - z*tax_rate) -tax_rate*(1-z))
+Y <- alpha_g*(autonomous_spend-b*r)
+plot(Y,r,typ='l',xlim=c(35000,145000))
+mpc2 <- 0.9
+alpha_g2 <- 1/(1+mpc2*(tax_rate - 1 - z*tax_rate) -tax_rate*(1-z))
+Y_2 <- alpha_g2*(autonomous_spend-b*r)
+lines(Y_2,r,col=2)
+legend('topright',legend = c('c = 0.8','c=0.9'),lty=1,col=1:2,cex=0.5)
+
+b_2 <- 40000
+plot(Y,r,typ='l',xlim=c(25000,50000))
+Y_2 <- alpha_g*(autonomous_spend-b_2*r)
+lines(Y_2,r,col=2)
+legend('topright',legend = c('b = 30000','b=40000'),lty=1,col=1:2,cex=0.5)
+```
+
+Our first plot above indicates that an increase in the marginal propensity to consume ($c$) leads to a flatter IS curve. An increase in $b$ also leads to a faltter IS curve. A flatter IS curve implies small changes in in the interest rate ($r$) lead to large changes in output/income ($Y$). In general the slope of our IS curve is determined as follows:
+
+\[Y = \alpha_{G}(\bar{A} - br)\]
+
+\[r = \frac{\alpha_{G}\bar{A}-Y}{\alpha_{G}b} \]
+
+\[r = \frac{\bar{A}}{b}- \frac{Y}{\alpha_{G}b} \]
+
+Here $\frac{\bar{A}}{b}$ is our intercept and $\frac{1}{\alpha_{G}b}$ is our slope. Notice that in both of our plots there was a shift in the IS curve. By how much does the IS curve shift for a given change in the level of autonomous spending?
+
+\[Y = \alpha_{G}(\bar{A} - br)\]
+
+\[\frac{\partial Y}{\partial \bar{A}} = \alpha_{G}\]
+
+\[\partial Y = \alpha_{G}\partial \bar{A}\]
+
+Income changes by $\alpha_{G}$ times the changes in autonomous spending. This tells us that if for instance government spending $G$ changes, the IS curve will shift by $\alpha_{G}*\Delta G$. Notice this is a shift in the IS curve as this implies the level of income will change for any given interest rate. 
+
+##Money Markets
+ 
+To fully characterize aggregate demand we need to also study the demand for real money balances in the economy. We need this secondary market to determine the prevailing interest rate in the economy. Furthermore, this second market will allow for money to play a role in the economy, which is ignored in the goods market. From our study of the quantity theory of money we know that money and central banks play a key role in the economy. 
+Generically, the demand for real money balances depends on the level of real income and the interest rate. Where the demand for real money balances should be positively related to real income (more income means more spending, you need more real money balances to facilitate the transactions) and should be negatively related to interest rates (higher interest rates imply a large opportunity cost for holding real money balances). We can mathematically characterize these relationships as:
+
+\[\frac{\bar{M}}{\bar{P}} = kY - hr\ \ k,h >0\]
+
+Here we have that the demand for real money balances is decreasing for a given level of income (Y); $\frac{\partial \frac{\bar{M}}{\bar{P}}}{\partial r} < 0$. $\bar{M}$ is the money supply assumed to be fixed and determined by the central bank. $\bar{P}$ is also assumed to be fixed, as we are analyzing the market for money at a snapshot in time (short-run model). We can re-arrange a few terms to solve for the interest rate in this economy:
+
+\[r=\frac{1}{h}(kY-\frac{\bar{M}}{\bar{P}})\]
+
+This is our liquidity-money (LM) component of our IS-LM model. The slope of the LM curve is govered by $\frac{k}{h}$. The larger $k$ relative to $h$ the steeper the LM curve will be. As $h\rightarrow0$, the LM curve is vertical and as $h\rightarrow\infty$ the LM curve is horizontal. Changes in the real money supply will lead to shifts in the LM curve as the intercept will change. 
+
+##Equilibrium in the Goods and Money Market
+
+We can combine our investment-savings and liquidity-money equations to solve for the equilbrium level of output and interest in an economy. The point of intersection is where our goods and money market clear. 
+
+\[(\text{LM equation})\ r=\frac{1}{h}(kY-\frac{\bar{M}}{\bar{P}})\]
+
+\[(\text{..or LM equation})\ Y=\frac{1}{k}(\frac{\bar{M}}{\bar{P}} + hr)\]
+
+\[(\text{IS equation})\ Y = \alpha_{G}(\bar{A} - br)\]
+
+
+We have two equations and two unkowns, we can plug in the LM curve into the IS curve and solve for the equilbrium level of output then solve for the equilbrium interest rate.
+
+\[r =\frac{1}{h}(kY-\frac{\bar{M}}{\bar{P}})\]]
+
+\[Y = \alpha_{G}(\bar{A} - br)\]
+
+\[Y = \alpha_{G}(\bar{A} - b\frac{1}{h}(kY-\frac{\bar{M}}{\bar{P}}))\]
+
+\[Y = \alpha_{G}\bar{A} - \frac{b\alpha_{G}k}{h}Y+\frac{b\alpha_{G}}{h}\frac{\bar{M}}{\bar{P}}\]
+
+\[Y +\frac{b\alpha_{G}k}{h}Y= \alpha_{G}\bar{A} +\frac{b\alpha_{G}}{h}\frac{\bar{M}}{\bar{P}}\]
+
+\[Y= \frac{\alpha_{G}\bar{A}}{1+\frac{b\alpha_{G}k}{h}} +\frac{b\alpha_{G}}{h}\frac{\bar{M}}{\bar{P}}\frac{1}{1+\frac{b\alpha_{G}k}{h}}\]
+
+
+\[Y= \frac{h\alpha_{G}}{h+b\alpha_{G}k}\bar{A} +\frac{b\alpha_{G}}{h+b\alpha_{G}k}\frac{\bar{M}}{\bar{P}}\]
+
+Let $\gamma = \frac{h\alpha_{G}}{h+b\alpha_{G}k}$ then:
+
+\[Y = \gamma\bar{A} +\gamma\frac{b}{h}\frac{\bar{M}}{\bar{P}}\]
+
+Now we can plug in and solve for interest rates:
+
+\[r =\frac{1}{h}(k(\frac{h\alpha_{G}}{h+b\alpha_{G}k}\bar{A} +\frac{b\alpha_{G}}{h+b\alpha_{G}k}\frac{\bar{M}}{\bar{P}})-\frac{\bar{M}}{\bar{P}})\]
+
+\[r =\frac{k\alpha_{G}}{h+b\alpha_{G}k}\bar{A} +\frac{kb\alpha_{G}}{h(h+b\alpha_{G}k)}\frac{\bar{M}}{\bar{P}}-\frac{1}{h}\frac{\bar{M}}{\bar{P}})\]
+
+\[r =\frac{k\alpha_{G}}{h+b\alpha_{G}k}\bar{A} +\frac{kb\alpha_{G}}{h(h+b\alpha_{G}k)}\frac{\bar{M}}{\bar{P}}-\frac{(h+b\alpha_{G}k)}{h(h+b\alpha_{G}k)}\frac{\bar{M}}{\bar{P}}\]
+
+\[r =\frac{k\alpha_{G}}{h+b\alpha_{G}k}\bar{A} -\frac{1}{(h+b\alpha_{G}k)}\frac{\bar{M}}{\bar{P}}\]
+
+Using the previously defined $\gamma$
+
+\[r = \gamma \frac{k}{h}\bar{A} - \gamma\frac{1}{h\alpha_{G}}\frac{\bar{M}}{\bar{P}}\]
+
+Recall that in the IS-LM framework we are looking at the economy in the very short-run where we assume that prices are sticky. In the long-run with flexible prices our definition of $Y$ remains the same but we have a flexible price level. Given that $P$ is in the denominator of our definition of equilbrium output, as prices rise output falls and as prices fall output increases. This is in fact our definition of aggregate demand for given levels of autonomous consumption $\bar{A}$ and given levels of the money supply $\bar{M}$.
+
+
+##Calibration
+
+```{r}
+#Real Disposable Personal Income: Per Capita (A229RX0)
+#Real personal consumption expenditures per capita (A794RX0Q048SBEA)
+library(quantmod)
+getSymbols(c('A794RX0Q048SBEA','A229RX0'),src = 'FRED')
+consumption_data <- merge(A794RX0Q048SBEA,A229RX0)
+consumption_data <- na.omit(consumption_data)
+head(consumption_data)
+consumption_mdl <- lm(consumption_data[,1]~consumption_data[,2])
+summary(consumption_mdl)
+
+#Real Gross Private Domestic Investment (GPDIC1)
+#10-Year Treasury Inflation-Indexed Security, Constant Maturity (DFII10)
+getSymbols(c('GPDIC1','DFII10'),src = 'FRED')
+investment_data <- merge(GPDIC1,DFII10)
+investment_data <- na.omit(investment_data)
+head(investment_data)
+investment_data[,2] <- investment_data[,2]/100
+investment_mdl <- lm(investment_data[,1]~investment_data[,2])
+summary(investment_mdl)
+
+mpc <- coef(consumption_mdl)[2]
+tax_rate <- 0.25 #made it up
+z <- 0.9 #made it up
+#+coef(investment_mdl)[1] + coef(consumption_mdl)[1] +
+autonomous_spend <- 3600  #guessing 
+r <- seq(0.05,0.001,by=-0.0001) 
+b <- coef(investment_mdl)[2]*-1 #Each 1 percentage point increase in interest rates leads to a decrease of investment of 260.3473 billion
+alpha_g <- 1/(1+mpc*(tax_rate - 1 - z*tax_rate) -tax_rate*(1-z))
+IS <- alpha_g*(autonomous_spend-b*r)
+
+#Real gross domestic product per capita (A939RX0Q048SBEA)
+#Real M1 Money Stock (M1REAL)
+#10-Year Treasury Inflation-Indexed Security, Constant Maturity (DFII10)
+getSymbols(c('A939RX0Q048SBEA','DFII10','M1REAL'),src = 'FRED')
+money_data <- merge(M1REAL,A939RX0Q048SBEA,DFII10)
+colnames(money_data) <- c('m1_real','gdp','ten_yr')
+money_data <- na.omit(money_data)
+money_data[,3] <- money_data[,3]/100
+money_mdl <- lm(m1_real~gdp + ten_yr,data = money_data)
+summary(money_mdl)
+
+h <- coef(money_mdl)[3]*-1
+k <- coef(money_mdl)[2]
+M_bar <- as.numeric(M1REAL[nrow(M1REAL)]) #current M1
+LM <- (1/k)*(M_bar + h*r - coef(money_mdl)[1])
+LM[which.min(abs(r - as.numeric(DFII10[nrow(DFII10)])/100))]
+IS[which.min(abs(r - as.numeric(DFII10[nrow(DFII10)])/100))]
+
+plot(IS,r,typ='l',ylab='r',xlab='Y',xlim = c(min(IS,LM),max(IS,LM)))
+abline(h =  as.numeric(DFII10[nrow(DFII10)])/100,lty = 2)
+abline(v = as.numeric(A939RX0Q048SBEA[nrow(A939RX0Q048SBEA)]),lty = 2)
+lines(LM,r)
+
+#What adjustments can we make to have our model be near the current interst rate and output levels?
+
+mpc <- coef(consumption_mdl)[2]
+tax_rate <- 0.25
+z <- 0.9
+autonomous_spend <- 3700 #Icreasing autnomous spending by 100
+r <- seq(0.05,0.001,by=-0.0001) 
+b <- coef(investment_mdl)[2]*-1 #Each 1 percentage point increase in interest rates leads to a decrease of investment of 260.3473 billion
+alpha_g <- 1/(1+mpc*(tax_rate - 1 - z*tax_rate) -tax_rate*(1-z))
+IS <- alpha_g*(autonomous_spend-b*r)
+
+h <- coef(money_mdl)[3]*-1 #Same as before 
+k <- 0.071 #increase the weight of Y fro 0.068
+M_bar <- as.numeric(M1REAL[nrow(M1REAL)]) #current M1
+LM <- (1/k)*(M_bar + h*r - coef(money_mdl)[1])
+LM[which.min(abs(r - as.numeric(DFII10[nrow(DFII10)])/100))]
+IS[which.min(abs(r - as.numeric(DFII10[nrow(DFII10)])/100))]
+
+plot(IS,r,typ='l',ylab='r',xlab='Y',xlim = c(min(IS,LM),max(IS,LM)))
+abline(h =  as.numeric(DFII10[nrow(DFII10)])/100,lty = 2)
+abline(v = as.numeric(A939RX0Q048SBEA[nrow(A939RX0Q048SBEA)]),lty = 2)
+lines(LM,r)
+```
+
+
+##Fiscal Policy Multiplier
+
+When the government decides to put in place a policy on government spending they would like to have an idea of the impact on the output of the economy. (Holding monetary policy constant)
+
+\[Y = \gamma\bar{A} +\gamma\frac{b}{h}\frac{\bar{M}}{\bar{P}}\]
+
+\[\frac{\partial Y}{\partial \bar{G}} = \gamma\]
+
+Recall that $\bar{G}$ is embedded in our definition of all autonomous spending $\bar{A}$. An increase in government spending increases aggregate demand but reduces the level of national savings in the economy. The reduced level of national savings increases interest rates. As interest rates rise they reduce the amount of investment that takes place in the economy. Our measure of $\gamma$ takes all of this into account 
+
+\[\gamma = \frac{h\alpha_{G}}{h+b\alpha_{G}k}\]
+
+Here $\alpha_{G} = \frac{1}{1-c(1 - t + zt) - t + zt}$, $c$ is marginal propensity to consume, and $t$ is the tax rate. $k$ and $h$ come from our model of the money markets through liquidity-money curve, where $k$ is the weight on output and $h$ is the weight on interest rates. Lastly, $b$ is the sensitivity of investment to changes in the interest rate.
+
+Let's walk through an example. Let $c = 0.94$ and $t = 0.25$/$z=0.3$, this implies that $\alpha_{G} = 20$. Let $b = 26,035$, so that if investments are measured in billions a $0.01$ increase in $r$ leads to a 260 billion decrease in investment. Let $k = 0.071$ implying each one percent increase in output/income per capita leads to an increase of real money balances of \$71 million. Lastly, let $h = 12,731$ implying each one percentage point increase in interest rates reduces real money balances by 127 billion. 
+
+```{r}
+mpc <- 0.94
+tax_rate <- 0.25
+z <- 0.3
+alpha_g <- 1/(1+mpc*(tax_rate - 1 - z*tax_rate) -tax_rate*(1-z))
+h <- 12731
+k <- 0.071
+b <- 26035
+gamma <- (h*alpha_g)/(h + b*alpha_g*k)
+gamma
+gamma*tax_rate - tax_rate*z*gamma-1
+```
+
+Plugging in all of our assumptions, an increase of government spending by \$1 corresponds to an increase in output of \$5.13. What happens to the government surplus (what they collect in taxes less what they spend) in this case?
+
+\[BS = tY - \bar{G}\]
+
+\[\Delta BS = t\Delta Y - tz\Delta Y - \Delta \bar{G}\]
+
+\[\Delta BS = 0.25\gamma -(0.25)(0.3)\gamma- 1\]
+
+\[\Delta BS = 0.25(5.13.) -(0.25)(0.3)(5.13.)- 1\]
+
+\[\Delta BS = 1.28 - 0.38 - 1 = -\$0.10\]
+
+Each dollar the government spends corresponds to an increase in output by \$5.13 but reduces the budget surplus by \$0.10 Keep in mind there is large variation in individuals estimates of the fiscal multiplier and that there is significant debate over the multiplier in politics. For instance if we assume that the marginal propensity to consume is 0.75, the fiscal multiplier falls significantly to 2.84, in which case a dollar spent by the government would correspond to a reduction in the budget surplus by \$0.93. 
+
+```{r}
+mpc <- 0.75
+tax_rate <- 0.25
+z <- 0.3
+alpha_g <- 1/(1+mpc*(tax_rate - 1 - z*tax_rate) -tax_rate*(1-z))
+h <- 12731
+k <- 0.071
+b <- 26035
+gamma <- (h*alpha_g)/(h + b*alpha_g*k)
+gamma
+gamma*0.25 - 0.25*0.9*gamma-1
+```
+
+In the plot below we can see how sensitive the fiscal multiplier is to changes in a variety of variables. In order for the budget surplus to increase the fiscal multiplier needs to exceed:
+
+\[t\Delta Y - tz\Delta Y - \Delta \bar{G} \ge 0\]
+
+\[t\gamma - tz\gamma- 1 \ge 0\]
+
+\[t\gamma - tz\gamma \ge 1\]
+
+\[\gamma \ge \frac{1}{t(1-z)}\]
+
+which is indicated by the horizontal dashed line. 
+
+```{r}
+mpc <- seq(0.75,0.99,by = 0.01)
+tax_rate <- 0.25
+z <- 0.3
+alpha_g <- 1/(1+mpc*(tax_rate - 1 - z*tax_rate) -tax_rate*(1-z))
+h <- 12731
+k <- 0.071
+b <- 26035
+gamma <- (h*alpha_g)/(h + b*alpha_g*k)
+plot(mpc,gamma,typ='l',main='Fiscal Multiplier\nSensitivity to MPC')
+abline(h=1/(tax_rate*(1-z)),lty = 2,col = 2)
+
+mpc <- 0.94
+tax_rate <- 0.25
+z <- 0.3
+alpha_g <- 1/(1+mpc*(tax_rate - 1 - z*tax_rate) -tax_rate*(1-z))
+h <- seq(1000,25000,by=100) #changes in the sensitivity of money demand to interst rates m/p = kY-hr
+#higher h corresponds to less money demanded per unit change in interst rates
+k <- 0.071
+b <- 26035
+gamma <- (h*alpha_g)/(h + b*alpha_g*k)
+plot(h,gamma,typ='l',main='Fiscal Multiplier\nSensitivity to h')
+abline(h=1/(tax_rate*(1-z)),lty = 2,col = 2)
+
+mpc <- 0.94
+tax_rate <- 0.25
+z <- 0.3
+alpha_g <- 1/(1+mpc*(tax_rate - 1 - z*tax_rate) -tax_rate*(1-z))
+h <- 12731 
+k <- seq(0.01,0.2,by=0.01) #changes in the sensitivity of money demand to output m/p = kY-hr
+#higher k corresponds to more money demanded per unit change in output
+b <- 26035
+gamma <- (h*alpha_g)/(h + b*alpha_g*k)
+plot(k,gamma,typ='l',main='Fiscal Multiplier\nSensitivity to k')
+abline(h=1/(tax_rate*(1-z)),lty = 2,col = 2)
+
+
+mpc <- 0.94
+tax_rate <- 0.25
+z <- 0.3
+alpha_g <- 1/(1+mpc*(tax_rate - 1 - z*tax_rate) -tax_rate*(1-z))
+h <- 12731 
+k <- 0.071
+b <- seq(10000,65000,by=1000)#changes in the sensitivity of investments to interst rates
+#Higher b corresponds to a larger drop in investment per unit change in interst rates
+gamma <- (h*alpha_g)/(h + b*alpha_g*k)
+plot(b,gamma,typ='l',main='Fiscal Multiplier\nSensitivity to b')
+abline(h=1/(tax_rate*(1-z)),lty = 2,col = 2)
+
+```
+
+
+
+##Monetary Policy Multiplier
+
+How do the actions of the central bank of a country impact the output of the economy? (Holding fiscal policy constant)
+
+\[Y = \gamma\bar{A} +\gamma\frac{b}{h}\frac{\bar{M}}{\bar{P}}\]
+
+\[\frac{\partial Y}{\partial \frac{\bar{M}}{\bar{P}}} = \gamma\frac{b}{h}\]
+
+Expanding on our calculation for the fiscal multiplier, we can estimate the monetary multiplier:
+
+```{r}
+mpc <- 0.94
+tax_rate <- 0.25
+z <- 0.3
+alpha_g <- 1/(1+mpc*(tax_rate - 1 - z*tax_rate) -tax_rate*(1-z))
+h <- 12731
+k <- 0.071
+b <- 26035
+gamma <- (h*alpha_g)/(h + b*alpha_g*k)
+(b/h)*gamma
+```
+
+The smaller $h$ and $k$ and the larger $b$ and $\alpha_{G}$ the more expansionary the effect of an inrease in real money balances on the equilbrium level of income. Large $b$ and $\alpha_{G}$ correspond to a very flat IS curve. 
+
+
+#Dynamic Model
+
+\[Y_{t} = \gamma\bar{A_{t}} +\gamma\frac{b}{h}\frac{M_{t}}{P_{t}}\]
+
+\[\pi_{t+1} = \pi^{e}_{t+1} + \frac{\epsilon}{\omega}(\frac{Y_{t}-Y^{*}}{Y^{*}})\]
+
+Previously we found that:
+
+\[r = \gamma \frac{k}{h}\bar{A} - \gamma\frac{1}{h\alpha_{G}}\frac{\bar{M}}{\bar{P}}\]
+
+We're going to adjust this model to have what is known as a Taylor rule which will act as the central banks monetary policy rule. 
+
+\[r_{t}= i^{*} + \pi_{t} + \alpha(\pi_{t} - \pi^{*}) + \beta(\frac{Y_{t}-Y^{*}}{Y_{t}})\]
+
+Here $i^{*}$ is the natural rate of interst and $\pi^{*}$ is the central banks target level of inflation. $\alpha$ and $\beta$ govern how much weight the central bank places on hitting the inflation target versus managing deviations from potential output. In practice, the rule is usually set to 
+
+\[r_{t}= 2 + \pi_{t} + 0.5(\pi_{t} - \pi^{*}) + 0.5(\frac{Y_{t}-Y^{*}}{Y_{t}})\]
+
+If we assume the central bank is adjusting the money supply to hit this level of interest rates than we can solve for the money supply over time:
+
+\[\frac{M_{t}}{P_{t}}=(\gamma \frac{k}{h}\bar{A}-r)\frac{h\alpha_{G}}{\gamma} \]
+
+\[\frac{M_{t}}{P_{t}}= k\alpha_{G}\bar{A}-r\frac{h\alpha_{G}}{\gamma} \]
+
+```{r}
+y_star <- 55000
+i_star <- 0.02
+pi_star <- 0.03
+A_bar <- 4024.24
+
+mpc <- 0.94
+tax_rate <- 0.25
+z <- 0.3
+alpha_g <- 1/(1+mpc*(tax_rate - 1 - z*tax_rate) -tax_rate*(1-z))
+
+h <- 12731
+k <- 0.071
+b <- 26035
+gamma <- (h*alpha_g)/(h + b*alpha_g*k) 
+epsilon <- -0.41
+omega <- -1.61
+
+y_t <- y_star
+pi_t <- pi_star
+r_t <- i_star + pi_t + 0.5*(pi_t - pi_star) + 0.5*((y_t -   y_star)/y_star)
+money_balances <- k*y_t - h*r_t
+
+transitions <- matrix(NA,50,4)
+for(i in 1:50){
+  if(10<=i & i <=14){
+    #Demand Shock#
+    #a_shk <- 0.25 #Incrase spending (fiscal)
+    s_shk <- 0.03 #Supply side shock
+  }else{
+    i_star <- 0.02
+    s_shk <- 0
+    a_shk <- 0
+  }
+  
+  #Aggregate Supply
+  pi_t <- pi_t + (epsilon/omega)*((y_t - y_star)/y_star) + s_shk
+
+  #Aggregate Demand
+  y_t <- gamma*A_bar*(1+a_shk) + (b/h)*gamma*money_balances
+  
+  #Taylor Rule
+  r_t <- i_star + pi_t + 0.5*(pi_t - pi_star) + 0.5*((y_t -   y_star)/y_star)
+  
+  #which.min(abs(y_t - y_star))
+  money_balances <- k*y_t - h*r_t
+  transitions[i,] <- c(y_t,pi_t,r_t,money_balances)
+}
+options(scipen = 10)
+transitions[1,1]
+plot(transitions[,1],typ='l',ylab='Output per Capita')
+abline(v = c(10,15),lty = 2)
+plot(transitions[,2],typ='l',ylab='Inflation')
+abline(v = c(10,15),lty = 2)
+plot(transitions[,3],typ='l',ylab='Interest Rates')
+abline(v = c(10,15),lty = 2)
+plot(transitions[,4],typ='l',ylab='Real Money')
+abline(v = c(10,15),lty = 2)
+```
+
+
+
+#Another Dynamic Model (Mankiw)
+
+\[\text{(Output)}\ Y_{t} = \bar{Y}_{t} - \eta(r_{t} - \rho) + \epsilon_{t}\]
+
+> Here $Y_{t}$ is total output of goods and services, $\bar{Y}_{t}$ is the economy's natural level of output, $r_{t}$ is the real interest rate, and $\epsilon_{t}$ is a random disturbance at time $t$. $\rho$ is the natural rate of interest, that is the real rate of interest in the abscence of any shocks. $\eta$ governs how sensitive demand is to interest rates.  
+
+\[\text{(Adaptive Expectations)}\ E_{t}\pi_{t+1} = \pi_{t}\]
+
+\[\text{(Real Interest Rate)}\ r_{t} = i_{t} - E_{t}\pi_{t+1} \]
+
+\[\text{(Phillips Curve)}\ \pi_{t} = \pi_{t-1} + \phi(Y_{t}-\bar{Y}_{t}) + \zeta_{t}\]
+
+\[\text{(Taylor Rule)}\ i_{t} = \pi_{t} + \rho + \theta_{\pi}(\pi_{t}-\pi_{t}^{*})+\theta_{Y}(Y_{t}-\bar{Y}_{t})\]
+
+
+```{r}
+y_star <- 100 #Long run output
+pi_star <- 2 #target inflation 
+eta <- 1 #Demand sensitivity to interest rates
+rho <- 2 #natural rate of interest
+phi <- 0.25 #Weight on Phillips curve 0.25 -> sacrifice ratio of 4
+theta_pi <- 0.5 #Taylor rule weight on inflation
+theta_y <- 0.5 #Taylor rule weight on output
+
+y_t <- y_star
+pi_t <- pi_star
+r_t <- rho
+i_t <- r_t + pi_t
+parameter_tracker <- matrix(NA,50,4)
+supply_demand <- T
+for(i in 1:nrow(parameter_tracker)){
+  if(i == 10 & supply_demand){
+    supply_shock <- -1
+  }else{
+    supply_shock <- 0
+  }
+  
+  if(10 <= i & i <=14 & (supply_demand == F)){
+    demand_shock <- 1
+  }else{
+    demand_shock <- 0
+  }
+  
+  #Aggregate Supply
+  pi_t <- pi_t + phi*((y_t - y_star)) + supply_shock
+  
+  #Aggregate Demand
+  y_t <- y_star - eta*(r_t - rho) + demand_shock
+  
+  #Taylor Rule
+  i_t <- pi_t + rho + theta_pi*(pi_t - pi_star) + theta_y*((y_t - y_star))
+  r_t <- i_t - pi_t
+  parameter_tracker[i,] <- c(y_t,pi_t,r_t,i_t)
+}
+parameter_tracker[,1] <- (parameter_tracker[,1]/100)*55000
+par(mfrow=c(2,2))
+plot(parameter_tracker[,1],type = 'l',ylab='Output')
+plot(parameter_tracker[,2],type = 'l',ylab='Inflation')
+plot(parameter_tracker[,3],type = 'l',ylab='Real Interest Rate')
+plot(parameter_tracker[,4],type = 'l',ylab='Nominal Interest Rate')
+```
+
+
+#Vector Autoregression (VAR)
+
+The simulations we have been running above are actually depictions of what is known as an impulse response function. Impulse response functions show us what happens to a set of variables when we \emph{shock} one variable. Statistically, we can estimate a system of equations to describe the behavior of a set of time-series data through VAR models. A VAR is a n-equation, n-variable linear model in which each variable is in turn explained by its own lagged values, plus current and past values of the remaining n-1 variables initially proposed by Sims (1982). For example, a lag-2 model of two variables may take the form of:
+
+\[X_{t} = \beta_{0} + \beta_{1} X_{t-1} + \beta_{2}X_{t-2}+\beta_3 Y_{t-1} + \beta_{4}Y_{t-2}+\zeta_{t}\]
+
+\[Y_{t} = \alpha_{0} + \alpha_{1} X_{t-1} + \alpha_{2}X_{t-2}+\alpha_{3} Y_{t-1} + \alpha_{4}Y_{t-2}+\eta_{t}\]
+
+Each equation in the system can be estimated by ordinary least squares (OLS) regression. With the estimated models in hand one can simulate a shock to one variable and see how future values of other variables in the system are impacted. VARs are extremely useful in the real world, given their easy of interpretation and implementation. When dealing with time-series data we need to make sure that are data is weakly-stationary, that is we have the first two moments of the distribution are fixed across time. For a given time series $y_{t}$:
+
+\[E(y_{t}) = \mu\ \forall t\]
+
+\[Var(y_{t}) = \sigma^{2}\ \forall t\]
+
+Without the assumption of stationarity our OLS estimates will be biased and inconsistent. You'll learn more about this in your time-series econometrics course.
+
+Stock and Watson (2001) have a wonderful paper that analyzes and describes VARs in the context of a macroeconometricians tool kit. They model the dynamics between inflation (as measured by the chained-GDP deflator), the unemployment rate, and the federal funds rate. The estimated equations are then used to simulate how each variable typically responds to shocks. When estimating impulse response functions, we need to impose a structure on how shocks pass through the system. Most impulse response functions impose a recursive structure of contemporaneous shocks (variable 1 impacts variables 2 and 3 at time $t$, variable 2 impacts only variable 3 at time $t$, variable 3 does not impact variable 1 and variable 2 at time $t$).
+
+Below we re-create Stock and Watson's reduced form VAR(4) model and simulate the same impulse response functions they have in their paper. 
+
+
+```{r}
+#Re-creation of Stock and Watson (2001)
+#https://faculty.washington.edu/ezivot/econ584/stck_watson_var.pdf
+library(quantmod)
+library(vars)
+getSymbols(c('GDPCTPI','UNRATE','FEDFUNDS'),src='FRED')
+#Ordering of variables matters for impulse response functions
+macro_data <- merge(GDPCTPI,UNRATE,FEDFUNDS)
+macro_data <- na.omit(macro_data)
+macro_data[,1] <- 400*Delt(macro_data[,1],type = 'log')
+macro_data <- na.omit(macro_data)
+macro_data <- macro_data['1960-01-01'<=index(macro_data)&index(macro_data) < '2001-01-01',]
+# head(macro_data)
+# tail(macro_data)
+# VARselect(macro_data)
+mdl <- VAR(macro_data,p = 4)
+summary(mdl)
+#Size of Shocks#
+# summary(mdl)$varresult$GDPCTPI$sigma
+# summary(mdl)$varresult$UNRATE$sigma
+# summary(mdl)$varresult$FEDFUNDS$sigma
+
+cpi_irf <- irf(mdl,impulse = 'GDPCTPI',ortho = F,n.ahead = 24,ci=0.66,runs = 300)
+par(mfrow=c(1,3))
+plot(cpi_irf$irf$GDPCTPI[,1],typ='l',ylab='Inflation')
+lines(cpi_irf$Lower$GDPCTPI[,1],lty = 2)
+lines(cpi_irf$Upper$GDPCTPI[,1],lty = 2)
+abline(h = 0)
+
+plot(cpi_irf$irf$GDPCTPI[,2],typ='l',ylab='Unemployment',ylim=c(-0.1,0.3))
+lines(cpi_irf$Lower$GDPCTPI[,2],lty = 2)
+lines(cpi_irf$Upper$GDPCTPI[,2],lty = 2)
+abline(h = 0)
+
+plot(cpi_irf$irf$GDPCTPI[,3],typ='l',ylab='Federal Funds Rate',ylim=c(0.0,0.75))
+lines(cpi_irf$Lower$GDPCTPI[,3],lty = 2)
+lines(cpi_irf$Upper$GDPCTPI[,3],lty = 2)
+abline(h = 0)
+```
+
+A one-unit shock to inflation decays slowly over the course of 24-quarters. While inflation proceeds to fall unemployment proceeds to increase. The increase in inflation also corresponds to an increase in the federal funds rate, which is consistent with the Federal Reserves policy to combat inflation. 
+
+
+```{r}
+unrate_irf <- irf(mdl,impulse = 'UNRATE',ortho = F,n.ahead = 24,ci=0.66,runs = 300)
+par(mfrow=c(1,3))
+plot(unrate_irf$irf$UNRATE[,1],typ='l',ylab='Inflation',ylim=c(-2.0,1.0))
+lines(unrate_irf$Lower$UNRATE[,1],lty = 2)
+lines(unrate_irf$Upper$UNRATE[,1],lty = 2)
+abline(h = 0)
+
+plot(unrate_irf$irf$UNRATE[,2],typ='l',ylab='Unemployment')
+lines(unrate_irf$Lower$UNRATE[,2],lty = 2)
+lines(unrate_irf$Upper$UNRATE[,2],lty = 2)
+abline(h = 0)
+
+plot(unrate_irf$irf$UNRATE[,3],typ='l',ylab='Federal Funds Rate',ylim=c(-5,1))
+lines(unrate_irf$Lower$UNRATE[,3],lty = 2)
+lines(unrate_irf$Upper$UNRATE[,3],lty = 2)
+abline(h = 0)
+```
+
+A shock to unemployment (higher unemployment) corresponds to a reduction in the Federal Funds rate. That is, as unemployment increases the Federal Reserve lowers interest rates to stimulate the economy. The incrase in unemployment is also followed by a reduction in inflation. 
+
+```{r}
+fedfund_irf <- irf(mdl,impulse = 'FEDFUNDS',ortho = F,n.ahead = 24,ci=0.66,runs = 300)
+par(mfrow=c(1,3))
+plot(fedfund_irf$irf$FEDFUNDS[,1],typ='l',ylab='Inflation',ylim=c(-0.5,0.5))
+lines(fedfund_irf$Lower$FEDFUNDS[,1],lty = 2)
+lines(fedfund_irf$Upper$FEDFUNDS[,1],lty = 2)
+abline(h = 0)
+
+plot(fedfund_irf$irf$FEDFUNDS[,2],typ='l',ylab='Unemployment',ylim=c(-0.2,0.3))
+lines(fedfund_irf$Lower$FEDFUNDS[,2],lty = 2)
+lines(fedfund_irf$Upper$FEDFUNDS[,2],lty = 2)
+abline(h = 0)
+
+plot(fedfund_irf$irf$FEDFUNDS[,3],typ='l',ylab='Federal Funds Rate',ylim=c(-0.5,1.5))
+lines(fedfund_irf$Lower$FEDFUNDS[,3],lty = 2)
+lines(fedfund_irf$Upper$FEDFUNDS[,3],lty = 2)
+abline(h = 0)
+```
+
+
+Lastly, an increase in the Federal Funds rate corresponds to an increase in unemployment and a reduction in inflation, which is consistent with our simple IS-LM framework. 
+
+VAR models can also be used to easily generate forecasts by recusively plugging-in previous/forecasted values into the system of equations. Our simple model forecasts that over the next three years inflation, unemployment, and the federal funds rate are all expected to increase.
+
+```{r}
+macro_data <- merge(GDPCTPI,UNRATE,FEDFUNDS)
+macro_data <- na.omit(macro_data)
+macro_data[,1] <- 400*Delt(macro_data[,1],type = 'log')
+macro_data <- na.omit(macro_data)
+mdl2 <- VAR(macro_data,p = 4)
+foreacst_mdl <- predict(mdl2,n.ahead=12)
+plot(foreacst_mdl)
+foreacst_mdl
+```
+
+
+
+
