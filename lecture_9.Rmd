@@ -1,0 +1,164 @@
+---
+title: "Lecture 9"
+author: "Hisam Sabouni"
+date: "12/10/2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+
+#Overview 
+
+In today's lecture we will look at the behavior of a variety of macroeconomic indicators during recssions in the United States. Recession dates are taken from the national beurea of economic reserach (NBER: https://www.nber.org/cycles.html). Directly from the site:
+
+> "A recession is a significant decline in economic activity spread across the economy, lasting more than a few months, normally visible in real GDP, real income, employment, industrial production, and wholesale-retail sales. A recession begins just after the economy reaches a peak of activity and ends as the economy reaches its trough. Between trough and peak, the economy is in an expansion. Expansion is the normal state of the economy; most recessions are brief and they have been rare in recent decades.
+
+> In choosing the dates of business-cycle turning points, we follow standard procedures to assure continuity in the chronology. Because a recession influences the economy broadly and is not confined to one sector, we emphasize economy-wide measures of economic activity. We view real GDP as the single best measure of aggregate economic activity. In determining whether a recession has occurred and in identifying the approximate dates of the peak and the trough, we therefore place considerable weight on the estimates of real GDP issued by the Bureau of Economic Analysis (BEA) of the U.S. Department of Commerce. The traditional role of the committee is to maintain a monthly chronology, however, and the BEA's real GDP estimates are only available quarterly. For this reason, we refer to a variety of monthly indicators to determine the months of peaks and troughs.
+
+> The committee places particular emphasis on two monthly measures of activity across the entire economy: (1) personal income less transfer payments, in real terms and (2) employment. In addition, we refer to two indicators with coverage primarily of manufacturing and goods: (3) industrial production and (4) the volume of sales of the manufacturing and wholesale-retail sectors adjusted for price changes. We also look at monthly estimates of real GDP such as those prepared by Macroeconomic Advisers (see http://www.macroadvisers.com). Although these indicators are the most important measures considered by the NBER in developing its business cycle chronology, there is no fixed rule about which other measures contribute information to the process."
+
+We can download the recssion dates into a dummy variable that has been coded up for us on FRED under the code: NBER based Recession Indicators for the United States from the Period following the Peak through the Trough (USREC). USREC takes on a value of 1 during dates that were classified by the NBER committee as a recession and 0 otherwise. The way the data is coded up on FRED the first entry of a 1 following a 0 marks the month after the peak of the economic \emph{cycle}. The last value of a 1 followed by a 0 marks the \emph{trough} of the cycle. 
+
+```{r}
+#install.packages('quantmod')
+library(quantmod)
+getSymbols('USREC',src='FRED')
+plot(USREC)
+```
+
+The data from FRED has recession markers going back to 1854. Given that the dyanmics of an economy shift over time, we will focus today on data post-1960 and study how a variety of macroeconomic indicators vary during recssions. 
+
+
+```{r}
+#Roughly 30% of months since 1854 have been recessionary periods
+plot(cumsum(USREC)/cumsum(rep(T,length(USREC)))) 
+us_rec_1960 <- USREC[index(USREC) >= '1960-01-01']
+#Roughly 13% of months since 1960 have been recessionary periods
+plot(cumsum(us_rec_1960)/cumsum(rep(T,length(us_rec_1960)))) 
+mrk_chng <- rle(diff(which(USREC == 1) )==1)
+mrk_chng$lengths #Length of recessions in months
+#Recessions have lasted: median of 3 months; mean of 9 months since 1854
+summary(mrk_chng$lengths) 
+mrk_chng2 <- rle(diff(which(us_rec_1960 == 1) )==1)
+#Recessions have lasted: median of 5 months; mean of 6.1 months since 1960
+summary(mrk_chng2$lengths) 
+```
+
+
+> * Inflation Rate: Measures how fast prices are rising by tracking the prices of a \emph{fixed} basket of goods and services over time. FRED Code: Consumer Price Index: Total All Items for the United States (CPALTT01USQ657N)
+
+```{r}
+getSymbols('CPALTT01USQ657N',src = 'FRED')
+cpi.changes <- CPALTT01USQ657N
+plot(cpi.changes,main='CPI',ylab='%',xlab='Time')
+summary(cpi.changes)
+cpi.changes2 <- na.omit(merge(cpi.changes,us_rec_1960))
+colnames(cpi.changes2) <- c('cpi','usrec')
+tapply(cpi.changes2$cpi,cpi.changes2$usrec,summary)
+```
+
+> * GDP deflator: $\frac{\text{Nominal GDP}}{\text{Real GDP}}$ reflects what's happening to the overall level of prices in the economy. FRED Code:  Gross Domestic Product: Implicit Price Deflator (GDPDEF)
+
+```{r}
+getSymbols('GDPDEF',src ='FRED')
+head(GDPDEF)
+gdpDeflatorChange <- Delt(GDPDEF,type = 'arithmetic')
+plot(100*gdpDeflatorChange,main='GDP Deflator')
+lines(cpi.changes,col = 2)
+legend('topleft',legend = c('Deflator','CPI'),col = 1:2,lty = 1)
+gdpDeflatorChange2 <- na.omit(merge(gdpDeflatorChange,us_rec_1960))
+colnames(gdpDeflatorChange2) <- c('gdp_defaltor','usrec')
+tapply(gdpDeflatorChange2$gdp_defaltor*400,gdpDeflatorChange2$usrec,summary)
+hist(gdpDeflatorChange2$gdp_defaltor[gdpDeflatorChange2$usrec == 0]*400,main='GDP Defaltor',xlab='%',xlim=c(-5,15))
+hist(gdpDeflatorChange2$gdp_defaltor[gdpDeflatorChange2$usrec == 1]*400,add=T,col=rgb(1,0,0,0.75))
+legend('topleft',legend = c('Expansions','Recessions'),col=c(1,rgb(1,0,0,0.75)),pch = 1)
+```
+
+
+In both of our measures of inflation (CPI and GDP defaltor) inflation seems to be higher during times of recssionary periods. On average inflation, as measured by GDP deflator is 4\% during recessions and 3.1\% during expansionary periods. Furthermore, the volatility of inflation is higher during recessions than expansionary periods, which can be approximated by taking the difference between the third and first quartiles (5.1\% vs. 2.15\%). How does this observation line up with our aggregate supply/new Keynesian Phillips curve?
+
+\[\pi_{t+1} = \pi^{e}_{t+1} + \frac{\epsilon}{\omega}(\frac{Y-Y^{*}}{Y^{*}})\]
+
+
+> * Unemployment Rate: Measures the fraction of the labor force that is out of work. FRED Code: Civilian Unemployment Rate (UNRATE)
+
+
+```{r}
+getSymbols('UNRATE',src = 'FRED')
+plot(UNRATE,main='Unemployment Rate',ylab='%',xlab='Time')
+summary(UNRATE)
+unrate2 <- na.omit(merge(UNRATE,us_rec_1960))
+tapply(unrate2[,1],unrate2[,2],summary)
+```
+
+Average unemployment increases during recessions (6.54\% vs. 5.92\%). Unsurprisingly, the entire distribution of unemployment during recessions is greater than expansionary periods.
+
+> * Real personal consumption expenditures per capita (A794RX0Q048SBEA)
+
+```{r}
+getSymbols('A794RX0Q048SBEA',src = 'FRED')
+plot(A794RX0Q048SBEA,main='Real Personal Consumption Expenditures per Capita',ylab='$USD',xlab='Time')
+consumption_growth <- Delt(A794RX0Q048SBEA,type='log')*400
+summary(consumption_growth)
+consumption_growth2 <- na.omit(merge(consumption_growth,us_rec_1960))
+tapply(consumption_growth2[,1],consumption_growth2[,2],summary)
+```
+
+On average real personal consuption expenditures grow at an annualized rate of 2.6\% during economic expansions and contract by 1\% during recessionary periods.
+
+> * Investment (I): Goods bought for future use. Consists of three categories: business fixed investment (new plant and equipment), residential investment (housing), and inventory. FRED Code: Gross Private Domestic Investment (GPDI).
+
+
+```{r}
+getSymbols('GPDI',src='FRED')
+plot(GPDI,main='Gross Private Domestic Investment',ylab='$USD Billions',xlab='Time')
+investment_growth <- Delt(GPDI,type='log')*400
+summary(investment_growth)
+investment_growth2 <- na.omit(merge(investment_growth,us_rec_1960))
+tapply(investment_growth2[,1],investment_growth2[,2],summary)
+```
+
+
+> * Government Purchases (G): Goods and services bought by federal, state, and local governments. FRED Code: Government Consumption Expenditures and Gross Investment (GCE).
+
+
+```{r}
+getSymbols('GCE',src='FRED')
+plot(GCE,main='Government Consumption Expenditures and Gross Investment',ylab='$USD Billions',xlab='Time')
+gov_spending_growth <- Delt(GCE,type='log')*400
+summary(gov_spending_growth)
+gov_spending_growth2 <- na.omit(merge(gov_spending_growth,us_rec_1960))
+tapply(gov_spending_growth2[,1],gov_spending_growth2[,2],summary)
+```
+
+
+
+> * Real GDP: Measures the total income of everyone in the economy (adjusted for the level of prices). FRED Code: Real Gross Domestic Product (GDPC1)
+
+```{r}
+getSymbols('GDPC1',src='FRED')
+plot(GDPC1,main='Real Gross Domestic Product',ylab='$USD Billions',xlab='Time')
+rgdp_growth <- Delt(GDPC1,type='log',k=4)*100
+summary(rgdp_growth)
+rgdp_growth2 <- na.omit(merge(rgdp_growth,us_rec_1960))
+tapply(rgdp_growth2[,1],rgdp_growth2[,2],summary)
+```
+
+> * S\&P 500: A market capitalization weighted index of the largest 500 companies traded on the NYSE or NASDAQ.
+
+```{r}
+getSymbols('^GSPC',from = '1950-01-01')
+gspc <- to.monthly(GSPC)
+sp_growth <- Delt(gspc[,6],type='log',k=12)*100
+summary(sp_growth)
+sp_growth2 <- na.omit(merge(sp_growth,us_rec_1960))
+tapply(sp_growth2[,1],sp_growth2[,2],summary)
+```
+
+
+
