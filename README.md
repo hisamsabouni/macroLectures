@@ -9,7 +9,7 @@ All of the files are generated in R-markdown files to allow you to see all of th
 
 If you have any questions feel free to email me at hisam.sabouni@cgu.edu
 
-I am an adjunct professor at Claremont Graduate Universtiy in the department of economic sciences.
+I am a Clinical Assistant Professor at Claremont Graduate Universtiy in the department of economic sciences.
 
 [Lecture 1: An introduction to macroeconomics with R](https://github.com/hisamsabouni/macroLectures/blob/master/lecture_1.pdf)
 
